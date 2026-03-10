@@ -82,9 +82,9 @@
 ### 待完成工作
 
 #### Phase 1 剩余任务
-- [ ] 运行 `flutter pub run build_runner build` 生成 freezed 代码
-- [ ] 迁移现有页面到新架构
-  - [ ] dashboard_page.dart - 使用新的 serviceStatusProvider
+- [ ] 运行 `flutter pub run build_runner build` 生成 freezed 代码（Docker编译中）
+- [x] 迁移现有页面到新架构
+  - [x] dashboard_page_riverpod.dart - 使用新的 serviceStatusProvider ✅
   - [ ] models_page.dart - 使用新的 configProvider
   - [ ] setup_page.dart - 使用新的 environmentRepository
   - [ ] skills_page.dart - 保持现有实现
@@ -152,6 +152,9 @@
 ## 提交记录
 
 ```
+516b486 feat: 使用Riverpod重写dashboard页面
+6a1af00 fix: 添加Flutter Linux编译所需的依赖（cmake, ninja-build等）
+9dcdf38 docs: 添加项目升级进度报告
 17476c2 feat: 添加Docker测试环境配置
 006f606 feat: Phase 1 架构重构 - 引入Riverpod、Repository模式和统一错误处理
 ```
