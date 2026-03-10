@@ -16,7 +16,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: '3.29.2'
           channel: 'stable'
 
       - name: Install dependencies
@@ -36,18 +36,81 @@ jobs:
           name: cicada-windows-x64
           path: cicada-windows-x64.zip
 
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Package zip
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../cicada-macos-universal.zip cicada.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicada-macos-universal
+          path: cicada-macos-universal.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Package tar.gz
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../cicada-linux-x64.tar.gz *
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicada-linux-x64
+          path: cicada-linux-x64.tar.gz
+
   release:
-    needs: build-windows
+    needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: cicada-windows-x64
+          pattern: cicada-*
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: cicada-windows-x64.zip
+          files: |
+            cicada-windows-x64.zip
+            cicada-macos-universal.zip
+            cicada-linux-x64.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: false
