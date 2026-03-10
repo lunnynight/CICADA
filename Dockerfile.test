@@ -1,0 +1,32 @@
+# CICADA 测试环境 - 裸机模拟
+# 基于 Ubuntu 22.04，不预装 Node.js 和 OpenClaw
+# 用于测试 Cicada 的完整安装流程
+
+FROM ubuntu:22.04
+
+# 设置环境变量
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装基础工具（模拟用户的基础系统）
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建工作目录
+WORKDIR /app
+
+# 创建配置目录（空的）
+RUN mkdir -p /root/.openclaw
+
+# 暴露端口
+EXPOSE 3000 3001
+
+# 健康检查（检查系统基础工具）
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl --version || exit 1
+
+# 默认命令
+CMD ["/bin/bash"]

@@ -11,23 +11,22 @@ services:
       - ./build-output:/output
     command: /bin/bash -c "flutter build linux --release && cp -r build/linux/x64/release/bundle /output/cicada-linux"
 
-  # OpenClaw 测试环境
-  openclaw-test:
+  # 裸机测试环境（无 Node.js 和 OpenClaw）
+  bare-test:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: cicada-openclaw-test
-    hostname: openclaw-test
+      dockerfile: Dockerfile.test
+    container_name: cicada-bare-test
+    hostname: bare-test
     environment:
       - NODE_ENV=development
-      - OPENCLAW_PORT=3000
     ports:
       - "3000:3000"
       - "3001:3001"
     volumes:
       - ./test-configs:/root/.openclaw
       - ./test-scripts:/app/test-scripts
-      - openclaw-data:/app/data
+      - bare-data:/app/data
     networks:
       - cicada-network
     command: tail -f /dev/null
@@ -48,9 +47,10 @@ services:
     restart: unless-stopped
 
 volumes:
-  openclaw-data:
+  bare-data:
   redis-data:
 
 networks:
   cicada-network:
     driver: bridge
+
