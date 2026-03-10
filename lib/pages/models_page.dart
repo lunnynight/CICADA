@@ -122,7 +122,7 @@ class _ModelsPageState extends State<ModelsPage> with SingleTickerProviderStateM
                 ],
                 // Model selector
                 DropdownButtonFormField<String>(
-                  initialValue: selectedModel,
+                  value: selectedModel,
                   decoration: const InputDecoration(labelText: '默认模型'),
                   items: [
                     ...models.map((m) => DropdownMenuItem(

@@ -140,23 +140,19 @@ class _SettingsPageState extends State<SettingsPage> {
           ]),
           const SizedBox(height: 24),
           _buildSection('镜像源设置', [
-            RadioGroup<String>(
-              groupValue: _selectedMirror,
-              onChanged: (v) { if (v != null) _saveMirror(v); },
-              child: Column(
-                children: <String, String>{
-                  '淘宝镜像': 'https://registry.npmmirror.com',
-                  '腾讯镜像': 'https://mirrors.cloud.tencent.com/npm/',
-                  '华为镜像': 'https://repo.huaweicloud.com/repository/npm/',
-                  '官方源': 'https://registry.npmjs.org',
-                }.entries.map(
-                  (e) => RadioListTile<String>(
-                    title: Text(e.key),
-                    subtitle: Text(e.value, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    value: e.value,
-                    dense: true,
-                  ),
-                ).toList(),
+            ...<String, String>{
+              '淘宝镜像': 'https://registry.npmmirror.com',
+              '腾讯镜像': 'https://mirrors.cloud.tencent.com/npm/',
+              '华为镜像': 'https://repo.huaweicloud.com/repository/npm/',
+              '官方源': 'https://registry.npmjs.org',
+            }.entries.map(
+              (e) => RadioListTile<String>(
+                title: Text(e.key),
+                subtitle: Text(e.value, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                value: e.value,
+                groupValue: _selectedMirror,
+                onChanged: (v) { if (v != null) _saveMirror(v); },
+                dense: true,
               ),
             ),
           ]),

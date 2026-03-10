@@ -248,44 +248,36 @@ class _SetupPageState extends State<SetupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RadioGroup<bool>(
+        RadioListTile<bool>(
+          title: const Text('在线模式（推荐）'),
+          subtitle: const Text('从互联网下载安装'),
+          value: true,
           groupValue: _online,
           onChanged: (v) => setState(() => _online = v ?? true),
-          child: Column(
-            children: [
-              RadioListTile<bool>(
-                title: const Text('在线模式（推荐）'),
-                subtitle: const Text('从互联网下载安装'),
-                value: true,
-              ),
-              RadioListTile<bool>(
-                title: const Text('离线模式'),
-                subtitle: const Text('使用本地安装包'),
-                value: false,
-              ),
-            ],
-          ),
+        ),
+        RadioListTile<bool>(
+          title: const Text('离线模式'),
+          subtitle: const Text('使用本地安装包'),
+          value: false,
+          groupValue: _online,
+          onChanged: (v) => setState(() => _online = v ?? true),
         ),
         if (_online) ...[
           const SizedBox(height: 12),
           const Text('NPM 镜像源:', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          RadioGroup<String>(
-            groupValue: _selectedMirror,
-            onChanged: (v) => setState(() => _selectedMirror = v ?? _selectedMirror),
-            child: Column(
-              children: {
-                '淘宝镜像（推荐）': 'https://registry.npmmirror.com',
-                '腾讯镜像': 'https://mirrors.cloud.tencent.com/npm/',
-                '华为镜像': 'https://repo.huaweicloud.com/repository/npm/',
-              }.entries.map(
-                (e) => RadioListTile<String>(
-                  title: Text(e.key),
-                  subtitle: Text(e.value, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  value: e.value,
-                  dense: true,
-                ),
-              ).toList(),
+          ...{
+            '淘宝镜像（推荐）': 'https://registry.npmmirror.com',
+            '腾讯镜像': 'https://mirrors.cloud.tencent.com/npm/',
+            '华为镜像': 'https://repo.huaweicloud.com/repository/npm/',
+          }.entries.map(
+            (e) => RadioListTile<String>(
+              title: Text(e.key),
+              subtitle: Text(e.value, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              value: e.value,
+              groupValue: _selectedMirror,
+              onChanged: (v) => setState(() => _selectedMirror = v ?? _selectedMirror),
+              dense: true,
             ),
           ),
         ],
