@@ -1,0 +1,103 @@
+{
+  "providers": [
+    {
+      "id": "doubao",
+      "name": "豆包 (Doubao)",
+      "provider": "volcengine",
+      "description": "字节跳动大模型，免费额度充足",
+      "apiBase": "https://ark.cn-beijing.volces.com/api/v3",
+      "models": [
+        {"id": "doubao-seed-2.0", "name": "Doubao Seed 2.0", "context": 128000},
+        {"id": "doubao-seed-2.0-code", "name": "Doubao Seed 2.0 Code", "context": 128000}
+      ],
+      "keyUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
+      "freeQuota": "500万 tokens/月免费",
+      "docs": "https://www.volcengine.com/docs/82379"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "provider": "deepseek",
+      "description": "高性价比推理模型",
+      "apiBase": "https://api.deepseek.com",
+      "models": [
+        {"id": "deepseek-chat", "name": "DeepSeek V3", "context": 128000},
+        {"id": "deepseek-reasoner", "name": "DeepSeek R1", "context": 128000}
+      ],
+      "keyUrl": "https://platform.deepseek.com/api_keys",
+      "freeQuota": "注册送 500万 tokens",
+      "docs": "https://platform.deepseek.com/api-docs"
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi (月之暗面)",
+      "provider": "moonshot",
+      "description": "超长上下文，适合文档处理",
+      "apiBase": "https://api.moonshot.cn/v1",
+      "models": [
+        {"id": "moonshot-v1-auto", "name": "Kimi Auto", "context": 1000000},
+        {"id": "moonshot-v1-128k", "name": "Kimi 128K", "context": 128000}
+      ],
+      "keyUrl": "https://platform.moonshot.cn/console/api-keys",
+      "freeQuota": "注册送 15元额度",
+      "docs": "https://platform.moonshot.cn/docs"
+    },
+    {
+      "id": "glm",
+      "name": "智谱 GLM",
+      "provider": "zhipu",
+      "description": "清华系大模型，工具调用能力强",
+      "apiBase": "https://open.bigmodel.cn/api/paas/v4",
+      "models": [
+        {"id": "glm-4-plus", "name": "GLM-4 Plus", "context": 128000},
+        {"id": "glm-4-flash", "name": "GLM-4 Flash (免费)", "context": 128000}
+      ],
+      "keyUrl": "https://open.bigmodel.cn/usercenter/apikeys",
+      "freeQuota": "GLM-4 Flash 完全免费",
+      "docs": "https://open.bigmodel.cn/dev/howuse/introduction"
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问 (Qwen)",
+      "provider": "dashscope",
+      "description": "阿里云大模型，多模态能力强",
+      "apiBase": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "models": [
+        {"id": "qwen-max", "name": "Qwen Max", "context": 32000},
+        {"id": "qwen-plus", "name": "Qwen Plus", "context": 131072},
+        {"id": "qwen-turbo", "name": "Qwen Turbo (免费)", "context": 131072}
+      ],
+      "keyUrl": "https://dashscope.console.aliyun.com/apiKey",
+      "freeQuota": "Qwen Turbo 免费，其他送 100万 tokens",
+      "docs": "https://help.aliyun.com/zh/model-studio/"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "provider": "minimax",
+      "description": "适合对话和角色扮演",
+      "apiBase": "https://api.minimax.chat/v1",
+      "models": [
+        {"id": "MiniMax-Text-01", "name": "MiniMax Text 01", "context": 1000000}
+      ],
+      "keyUrl": "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+      "freeQuota": "注册送额度",
+      "docs": "https://platform.minimaxi.com/document/introduction"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama 本地模型",
+      "provider": "ollama",
+      "description": "本地运行，完全免费，数据不出本机",
+      "apiBase": "http://localhost:11434",
+      "models": [
+        {"id": "qwen2.5:7b", "name": "Qwen 2.5 7B", "context": 32000},
+        {"id": "deepseek-r1:7b", "name": "DeepSeek R1 7B", "context": 32000},
+        {"id": "llama3.1:8b", "name": "Llama 3.1 8B", "context": 128000}
+      ],
+      "keyUrl": "",
+      "freeQuota": "完全免费，本地运行",
+      "docs": "https://ollama.com/"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "npm": {
+    "official": "https://registry.npmjs.org",
+    "mirrors": [
+      {"name": "淘宝镜像", "url": "https://registry.npmmirror.com", "priority": 1},
+      {"name": "腾讯镜像", "url": "https://mirrors.cloud.tencent.com/npm/", "priority": 2},
+      {"name": "华为镜像", "url": "https://repo.huaweicloud.com/repository/npm/", "priority": 3}
+    ]
+  },
+  "nodejs": {
+    "official": "https://nodejs.org/dist/",
+    "mirrors": [
+      {"name": "淘宝镜像", "url": "https://npmmirror.com/mirrors/node/", "priority": 1},
+      {"name": "腾讯镜像", "url": "https://mirrors.cloud.tencent.com/nodejs-release/", "priority": 2},
+      {"name": "清华镜像", "url": "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/", "priority": 3}
+    ]
+  },
+  "pip": {
+    "official": "https://pypi.org/simple",
+    "mirrors": [
+      {"name": "清华镜像", "url": "https://pypi.tuna.tsinghua.edu.cn/simple", "priority": 1},
+      {"name": "阿里镜像", "url": "https://mirrors.aliyun.com/pypi/simple/", "priority": 2},
+      {"name": "豆瓣镜像", "url": "https://pypi.douban.com/simple/", "priority": 3}
+    ]
+  },
+  "github": {
+    "proxies": [
+      {"name": "ghfast", "url": "https://ghfast.top/", "priority": 1},
+      {"name": "ghproxy", "url": "https://mirror.ghproxy.com/", "priority": 2}
+    ]
+  }
+}

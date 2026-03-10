@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "id": "clawhub",
+      "name": "ClawHub 官方",
+      "type": "clawhub",
+      "url": "https://clawhub.ai",
+      "description": "官方技能商店，5400+ 技能",
+      "enabled": true
+    },
+    {
+      "id": "awesome-zh",
+      "name": "中文精选技能",
+      "type": "github",
+      "url": "https://github.com/user/awesome-openclaw-skills-zh",
+      "description": "社区精选中文技能集合",
+      "enabled": true
+    },
+    {
+      "id": "gitee-mirror",
+      "name": "Gitee 镜像源",
+      "type": "gitee",
+      "url": "https://gitee.com/openclaw-cn/skills",
+      "description": "国内 Gitee 技能镜像",
+      "enabled": true
+    },
+    {
+      "id": "local-gitea",
+      "name": "内网 Gitea",
+      "type": "gitea",
+      "url": "",
+      "description": "企业内网 Gitea 技能源（需手动配置地址）",
+      "enabled": false,
+      "enterprise": true
+    }
+  ]
+}
