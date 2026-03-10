@@ -3,6 +3,15 @@ FROM ghcr.io/cirruslabs/flutter:3.29.2
 
 WORKDIR /app
 
+# 安装编译依赖
+RUN apt-get update && apt-get install -y \
+    cmake \
+    ninja-build \
+    clang \
+    pkg-config \
+    libgtk-3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # 复制项目文件
 COPY pubspec.yaml pubspec.lock ./
 COPY lib ./lib
