@@ -30,20 +30,8 @@ class _HomePageState extends State<HomePage> {
     _NavItem(Icons.settings, '设置'),
   ];
 
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = [
-      DashboardPage(onServiceStatusChanged: (running) {
-        setState(() => _serviceRunning = running);
-      }),
-      const SetupPage(),
-      const ModelsPage(),
-      const SkillsPage(),
-      const SettingsPage(),
-    ];
+  void _navigateTo(int index) {
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -56,12 +44,37 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: _pages[_selectedIndex],
+              child: _buildPage(_selectedIndex),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildPage(int index) {
+    switch (index) {
+      case 0:
+        return DashboardPage(
+          key: const ValueKey('dashboard'),
+          onServiceStatusChanged: (running) {
+            setState(() => _serviceRunning = running);
+          },
+        );
+      case 1:
+        return SetupPage(
+          key: const ValueKey('setup'),
+          onSetupComplete: () => _navigateTo(2),
+        );
+      case 2:
+        return const ModelsPage(key: ValueKey('models'));
+      case 3:
+        return const SkillsPage(key: ValueKey('skills'));
+      case 4:
+        return const SettingsPage(key: ValueKey('settings'));
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildSidebar() {
@@ -97,7 +110,7 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(8),
-                      onTap: () => setState(() => _selectedIndex = index),
+                      onTap: () => _navigateTo(index),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -143,6 +156,9 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _serviceRunning ? Colors.green : Colors.red,
+                    boxShadow: _serviceRunning
+                        ? [BoxShadow(color: Colors.green.withValues(alpha: 0.5), blurRadius: 6)]
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 8),

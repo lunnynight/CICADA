@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/installer_service.dart';
+import '../services/config_service.dart';
+import '../widgets/terminal_output.dart';
 
 class DashboardPage extends StatefulWidget {
   final ValueChanged<bool>? onServiceStatusChanged;
@@ -18,13 +20,24 @@ class _DashboardPageState extends State<DashboardPage> {
   String _openclawVersion = '检测中...';
   bool _serviceRunning = false;
   bool _actionLoading = false;
-  List<String> _configuredProviders = [];
+  Set<String> _configuredProviders = {};
+  Timer? _pollTimer;
+  final List<String> _serviceLog = [];
 
   @override
   void initState() {
     super.initState();
     _detectEnvironment();
     _loadConfiguredProviders();
+    _checkServiceStatus();
+    // Poll service status every 5 seconds
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkServiceStatus());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _detectEnvironment() async {
@@ -32,44 +45,65 @@ class _DashboardPageState extends State<DashboardPage> {
     final clawResult = await InstallerService.checkOpenClaw();
     if (!mounted) return;
     setState(() {
-      _nodeVersion =
-          nodeResult.exitCode == 0
-              ? (nodeResult.stdout as String).trim()
-              : '未安装';
-      _openclawVersion =
-          clawResult.exitCode == 0
-              ? (clawResult.stdout as String).trim()
-              : '未安装';
+      _nodeVersion = nodeResult.exitCode == 0
+          ? (nodeResult.stdout as String).trim()
+          : '未安装';
+      _openclawVersion = clawResult.exitCode == 0
+          ? (clawResult.stdout as String).trim()
+          : '未安装';
     });
   }
 
   Future<void> _loadConfiguredProviders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith('apikey_')).toList();
+    final configured = await ConfigService.getConfiguredProviders();
     if (!mounted) return;
-    setState(() {
-      _configuredProviders = keys.map((k) => k.replaceFirst('apikey_', '')).toList();
-    });
+    setState(() => _configuredProviders = configured);
+  }
+
+  Future<void> _checkServiceStatus() async {
+    final running = await InstallerService.isServiceRunning();
+    if (!mounted) return;
+    if (running != _serviceRunning) {
+      setState(() => _serviceRunning = running);
+      widget.onServiceStatusChanged?.call(running);
+    }
   }
 
   Future<void> _toggleService() async {
-    setState(() => _actionLoading = true);
+    setState(() {
+      _actionLoading = true;
+      _serviceLog.clear();
+    });
     try {
+      ProcessResult result;
       if (_serviceRunning) {
-        await InstallerService.stopService();
+        setState(() => _serviceLog.add('>>> 正在停止服务...'));
+        result = await InstallerService.stopService();
       } else {
-        await InstallerService.startService();
+        setState(() => _serviceLog.add('>>> 正在启动服务...'));
+        result = await InstallerService.startService();
       }
+
       if (!mounted) return;
-      setState(() {
-        _serviceRunning = !_serviceRunning;
-      });
-      widget.onServiceStatusChanged?.call(_serviceRunning);
+      final stdout = (result.stdout as String).trim();
+      final stderr = (result.stderr as String).trim();
+      if (stdout.isNotEmpty) setState(() => _serviceLog.add(stdout));
+      if (stderr.isNotEmpty) setState(() => _serviceLog.add(stderr));
+
+      if (result.exitCode == 0) {
+        setState(() => _serviceLog.add(_serviceRunning ? '✓ 服务已停止' : '✓ 服务已启动'));
+        // Wait a moment then check actual status
+        await Future.delayed(const Duration(seconds: 2));
+        await _checkServiceStatus();
+      } else {
+        setState(() => _serviceLog.add('✗ 操作失败 (exit: ${result.exitCode})'));
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+      setState(() => _serviceLog.add('错误: $e'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('操作失败: $e')),
+      );
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
@@ -104,6 +138,12 @@ class _DashboardPageState extends State<DashboardPage> {
               Expanded(child: _buildQuickActionsCard()),
             ],
           ),
+          if (_serviceLog.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('服务日志', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TerminalOutput(lines: _serviceLog, height: 150),
+          ],
         ],
       ),
     );
@@ -120,11 +160,11 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.cloud, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.cloud, size: 20),
+                SizedBox(width: 8),
+                Text(
                   'OpenClaw 服务状态',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -139,6 +179,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _serviceRunning ? Colors.green : Colors.red,
+                    boxShadow: _serviceRunning
+                        ? [BoxShadow(color: Colors.green.withValues(alpha: 0.5), blurRadius: 8)]
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -150,6 +193,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: _serviceRunning ? Colors.green : Colors.red,
                   ),
                 ),
+                const Spacer(),
+                if (_serviceRunning)
+                  Text('http://127.0.0.1:18789',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               ],
             ),
             const SizedBox(height: 16),
@@ -157,7 +204,11 @@ class _DashboardPageState extends State<DashboardPage> {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: _actionLoading ? null : _toggleService,
-                icon: Icon(_serviceRunning ? Icons.stop : Icons.play_arrow),
+                icon: _actionLoading
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Icon(_serviceRunning ? Icons.stop : Icons.play_arrow),
                 label: Text(_serviceRunning ? '停止服务' : '启动服务'),
                 style: FilledButton.styleFrom(
                   backgroundColor:
@@ -196,6 +247,8 @@ class _DashboardPageState extends State<DashboardPage> {
             _envRow('Node.js', _nodeVersion),
             const SizedBox(height: 8),
             _envRow('OpenClaw', _openclawVersion),
+            const SizedBox(height: 8),
+            _envRow('配置文件', ConfigService.configPath),
             const SizedBox(height: 8),
             _envRow('操作系统', Platform.operatingSystemVersion),
           ],
@@ -290,11 +343,11 @@ class _DashboardPageState extends State<DashboardPage> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  launchUrl(Uri.parse('http://127.0.0.1:18789/'));
-                },
+                onPressed: _serviceRunning
+                    ? () => launchUrl(Uri.parse('http://127.0.0.1:18789/'))
+                    : null,
                 icon: const Icon(Icons.open_in_browser),
-                label: const Text('打开 OpenClaw 面板'),
+                label: Text(_serviceRunning ? '打开 OpenClaw 面板' : '启动服务后可打开面板'),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF30363D)),
                 ),
@@ -311,6 +364,23 @@ class _DashboardPageState extends State<DashboardPage> {
                 },
                 icon: const Icon(Icons.terminal),
                 label: const Text('打开终端'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF30363D)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final dir = ConfigService.configDir;
+                  if (Platform.isWindows) {
+                    Process.run('explorer', [dir.replaceAll('/', '\\')]);
+                  }
+                },
+                icon: const Icon(Icons.folder_open),
+                label: const Text('打开配置目录'),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF30363D)),
                 ),

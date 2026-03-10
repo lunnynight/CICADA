@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/config_service.dart';
+import '../services/update_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,6 +15,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String _configPath = '';
   String _selectedMirror = 'https://registry.npmmirror.com';
+  bool _checkingUpdate = false;
+  UpdateInfo? _updateInfo;
 
   @override
   void initState() {
@@ -22,18 +26,57 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-    final prefs = await SharedPreferences.getInstance();
+    final config = await ConfigService.readConfig();
     if (!mounted) return;
     setState(() {
       _configPath = '$home/.openclaw/openclaw.json';
-      _selectedMirror = prefs.getString('npm_mirror') ?? 'https://registry.npmmirror.com';
+      _selectedMirror = config['npmMirror'] as String? ?? 'https://registry.npmmirror.com';
     });
   }
 
   Future<void> _saveMirror(String url) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('npm_mirror', url);
+    final config = await ConfigService.readConfig();
+    config['npmMirror'] = url;
+    await ConfigService.writeConfig(config);
     setState(() => _selectedMirror = url);
+  }
+
+  Future<void> _checkForUpdate() async {
+    setState(() {
+      _checkingUpdate = true;
+      _updateInfo = null;
+    });
+    try {
+      final info = await UpdateService.checkForUpdate();
+      if (!mounted) return;
+      setState(() => _updateInfo = info);
+      if (!info.hasUpdate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已是最新版本')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('检查更新失败: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  Future<void> _downloadUpdate(String url) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在下载更新，请稍候...')),
+    );
+    try {
+      await UpdateService.downloadAndLaunch(url);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('下载失败: $e')),
+      );
+    }
   }
 
   Future<void> _clearData() async {
@@ -119,13 +162,26 @@ class _SettingsPageState extends State<SettingsPage> {
           ]),
           const SizedBox(height: 24),
           _buildSection('关于', [
-            _buildSettingRow('版本', '1.0.0'),
+            _buildSettingRow('版本', '0.1.0'),
             _buildSettingRow('项目', 'Cicada (知了猴)'),
             ListTile(
               title: const Text('GitHub'),
               trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => launchUrl(Uri.parse('https://github.com/nicepkg/openclaw')),
+              onTap: () => launchUrl(Uri.parse('https://github.com/2233admin/cicada')),
             ),
+            ListTile(
+              title: const Text('检查更新'),
+              trailing: _checkingUpdate
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.system_update_outlined, size: 18),
+              onTap: _checkingUpdate ? null : _checkForUpdate,
+            ),
+            if (_updateInfo != null && _updateInfo!.hasUpdate)
+              _buildUpdateBanner(_updateInfo!),
           ]),
           const SizedBox(height: 24),
           _buildSection('数据管理', [
@@ -136,6 +192,69 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: _clearData,
             ),
           ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpdateBanner(UpdateInfo info) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C2B1C),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2EA043)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.new_releases_outlined, color: Color(0xFF3FB950), size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '发现新版本 v${info.latestVersion}',
+                style: const TextStyle(
+                  color: Color(0xFF3FB950),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          if (info.releaseNotes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              info.releaseNotes,
+              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (info.downloadUrl.isNotEmpty)
+                FilledButton.icon(
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('下载安装'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2EA043),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  onPressed: () => _downloadUpdate(info.downloadUrl),
+                )
+              else
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('前往下载'),
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://github.com/2233admin/cicada/releases/latest'),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

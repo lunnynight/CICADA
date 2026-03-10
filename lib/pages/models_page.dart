@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/preset_service.dart';
+import '../services/config_service.dart';
 
 class ModelsPage extends StatefulWidget {
   const ModelsPage({super.key});
@@ -15,6 +15,7 @@ class _ModelsPageState extends State<ModelsPage> with SingleTickerProviderStateM
   List<dynamic> _cnProviders = [];
   List<dynamic> _intlProviders = [];
   Set<String> _configuredIds = {};
+  List<String> _ollamaModels = [];
 
   @override
   void initState() {
@@ -32,83 +33,191 @@ class _ModelsPageState extends State<ModelsPage> with SingleTickerProviderStateM
   Future<void> _loadData() async {
     final cn = await PresetService.loadCnModels();
     final intl = await PresetService.loadIntlModels();
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith('apikey_')).toSet();
+    final configured = await ConfigService.getConfiguredProviders();
+    final ollama = await ConfigService.detectOllamaModels();
     if (!mounted) return;
     setState(() {
       _cnProviders = cn['providers'] as List;
       _intlProviders = intl['providers'] as List;
-      _configuredIds = keys.map((k) => k.replaceFirst('apikey_', '')).toSet();
+      _configuredIds = configured;
+      _ollamaModels = ollama;
     });
   }
 
   Future<void> _showConfigDialog(Map<String, dynamic> provider) async {
     final controller = TextEditingController();
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString('apikey_${provider['id']}');
-    if (existing != null) controller.text = existing;
+    final isOllama = provider['provider'] == 'ollama';
+
+    // Load existing key from openclaw.json
+    final config = await ConfigService.readConfig();
+    final providers = config['providers'] as Map<String, dynamic>? ?? {};
+    final existing = providers[provider['id']] as Map<String, dynamic>?;
+    if (existing != null && existing['apiKey'] != null) {
+      controller.text = existing['apiKey'] as String;
+    }
+
+    // Default model selection
+    final models = (provider['models'] as List)
+        .map((m) => m as Map<String, dynamic>)
+        .toList();
+    String selectedModel = existing?['defaultModel'] as String? ?? models.first['id'] as String;
 
     if (!mounted) return;
+
+    String? testResult;
+    bool testing = false;
+
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF161B22),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFF30363D)),
-        ),
-        title: Text('配置 ${provider['name']}'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'API Base: ${provider['apiBase']}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                  hintText: '输入你的 API Key',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF161B22),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF30363D)),
+          ),
+          title: Text('配置 ${provider['name']}'),
+          content: SizedBox(
+            width: 450,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'API Base: ${provider['apiBase']}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
-                obscureText: true,
-              ),
-              if ((provider['keyUrl'] as String).isNotEmpty) ...[
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () => launchUrl(Uri.parse(provider['keyUrl'])),
-                  child: Text(
-                    '获取 API Key \u2192',
-                    style: TextStyle(color: Colors.blue[300], fontSize: 13),
+                const SizedBox(height: 16),
+                if (!isOllama) ...[
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'API Key',
+                      hintText: '输入你的 API Key',
+                    ),
+                    obscureText: true,
                   ),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  if (_ollamaModels.isNotEmpty) ...[
+                    Text('检测到本地模型:', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: _ollamaModels.map((m) => Chip(
+                        label: Text(m, style: const TextStyle(fontSize: 11)),
+                        backgroundColor: const Color(0xFF0D1117),
+                        side: const BorderSide(color: Color(0xFF30363D)),
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      )).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    Text('未检测到 Ollama 本地模型，请先安装 Ollama 并下载模型。',
+                        style: TextStyle(color: Colors.orange[300], fontSize: 13)),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+                // Model selector
+                DropdownButtonFormField<String>(
+                  initialValue: selectedModel,
+                  decoration: const InputDecoration(labelText: '默认模型'),
+                  items: [
+                    ...models.map((m) => DropdownMenuItem(
+                      value: m['id'] as String,
+                      child: Text(m['name'] as String),
+                    )),
+                    if (isOllama)
+                      ..._ollamaModels
+                          .where((m) => !models.any((pm) => pm['id'] == m))
+                          .map((m) => DropdownMenuItem(value: m, child: Text('$m (本地)'))),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => selectedModel = v);
+                  },
                 ),
+                const SizedBox(height: 16),
+                // Test connection button
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: testing
+                          ? null
+                          : () async {
+                              setDialogState(() {
+                                testing = true;
+                                testResult = null;
+                              });
+                              final (ok, msg) = await ConfigService.testConnection(
+                                apiBase: provider['apiBase'] as String,
+                                apiKey: controller.text.trim(),
+                                model: selectedModel,
+                                provider: provider['provider'] as String,
+                              );
+                              setDialogState(() {
+                                testing = false;
+                                testResult = '${ok ? "✓" : "✗"} $msg';
+                              });
+                            },
+                      icon: testing
+                          ? const SizedBox(
+                              width: 14, height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.wifi_tethering, size: 16),
+                      label: Text(testing ? '测试中...' : '测试连接'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF30363D)),
+                      ),
+                    ),
+                    if (testResult != null) ...[
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          testResult!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: testResult!.startsWith('✓') ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if ((provider['keyUrl'] as String).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () => launchUrl(Uri.parse(provider['keyUrl'])),
+                    child: Text(
+                      '获取 API Key \u2192',
+                      style: TextStyle(color: Colors.blue[300], fontSize: 13),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          if (existing != null)
-            TextButton(
-              onPressed: () async {
-                await prefs.remove('apikey_${provider['id']}');
-                if (ctx.mounted) Navigator.pop(ctx, '__removed__');
-              },
-              child: const Text('删除', style: TextStyle(color: Colors.red)),
             ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
-            child: const Text('保存'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            if (existing != null)
+              TextButton(
+                onPressed: () async {
+                  await ConfigService.removeProvider(provider['id']);
+                  if (ctx.mounted) Navigator.pop(ctx, '__removed__');
+                },
+                child: const Text('删除', style: TextStyle(color: Colors.red)),
+              ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, '$selectedModel|||${controller.text}'),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              child: const Text('保存'),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -117,9 +226,19 @@ class _ModelsPageState extends State<ModelsPage> with SingleTickerProviderStateM
       setState(() => _configuredIds.remove(provider['id']));
       return;
     }
-    if (result.trim().isNotEmpty) {
-      await prefs.setString('apikey_${provider['id']}', result.trim());
-      setState(() => _configuredIds.add(provider['id']));
+
+    final parts = result.split('|||');
+    final model = parts[0];
+    final apiKey = parts.length > 1 ? parts[1].trim() : '';
+
+    if (isOllama || apiKey.isNotEmpty) {
+      await ConfigService.setProvider(
+        providerId: provider['id'] as String,
+        apiKey: apiKey,
+        apiBase: provider['apiBase'] as String,
+        defaultModel: model,
+      );
+      setState(() => _configuredIds.add(provider['id'] as String));
     }
   }
 
@@ -133,12 +252,23 @@ class _ModelsPageState extends State<ModelsPage> with SingleTickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '模型配置',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  const Text(
+                    '模型配置',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  if (_configuredIds.isNotEmpty)
+                    Text(
+                      '已配置 ${_configuredIds.length} 个供应商',
+                      style: TextStyle(color: Colors.green[300], fontSize: 13),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
-              Text('配置 AI 模型提供商的 API Key', style: TextStyle(color: Colors.grey[500])),
+              Text('配置 AI 模型提供商 — 保存后自动写入 openclaw.json',
+                  style: TextStyle(color: Colors.grey[500])),
               const SizedBox(height: 24),
               TabBar(
                 controller: _tabController,
