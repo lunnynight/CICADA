@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Flutter 编译服务
+  flutter-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: cicada-flutter-build
+    volumes:
+      - ./build-output:/output
+    command: /bin/bash -c "flutter build linux --release && cp -r build/linux/x64/release/bundle /output/cicada-linux"
+
+  # OpenClaw 测试环境
+  openclaw-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cicada-openclaw-test
+    hostname: openclaw-test
+    environment:
+      - NODE_ENV=development
+      - OPENCLAW_PORT=3000
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - ./test-configs:/root/.openclaw
+      - ./test-scripts:/app/test-scripts
+      - openclaw-data:/app/data
+    networks:
+      - cicada-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  # Redis（用于测试 claw-mesh 集成）
+  redis-test:
+    image: redis:7-alpine
+    container_name: cicada-redis-test
+    hostname: redis-test
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cicada-network
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+volumes:
+  openclaw-data:
+  redis-data:
+
+networks:
+  cicada-network:
+    driver: bridge

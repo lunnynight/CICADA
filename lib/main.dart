@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'pages/home_page.dart';
 
@@ -18,7 +19,7 @@ void main() async {
     await windowManager.focus();
   });
 
-  runApp(const CicadaApp());
+  runApp(const ProviderScope(child: CicadaApp()));
 }
 
 class CicadaApp extends StatelessWidget {
