@@ -6,6 +6,8 @@ import 'setup_page.dart';
 import 'models_page.dart';
 import 'skills_page.dart';
 import 'settings_page.dart';
+import 'diagnostic_page.dart';
+import 'token_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,6 +31,8 @@ class _HomePageState extends State<HomePage> {
     _NavItem(Icons.download, '安装向导'),
     _NavItem(Icons.smart_toy, '模型配置'),
     _NavItem(Icons.extension, '技能商店'),
+    _NavItem(Icons.analytics, 'Token分析'),
+    _NavItem(Icons.medical_services, '诊断中心'),
     _NavItem(Icons.settings, '设置'),
   ];
 
@@ -73,6 +77,10 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return const SkillsPage(key: ValueKey('skills'));
       case 4:
+        return const TokenPage(key: ValueKey('token'));
+      case 5:
+        return const DiagnosticPage(key: ValueKey('diagnostic'));
+      case 6:
         return const SettingsPage(key: ValueKey('settings'));
       default:
         return const SizedBox.shrink();

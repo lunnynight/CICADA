@@ -17,6 +17,8 @@ dependencies:
   window_manager: ^0.4.3
   path_provider: ^2.1.5
   file_picker: ^8.1.6
+  fl_chart: ^0.68.0
+  super_clipboard: ^0.8.0
 
 dev_dependencies:
   flutter_test:

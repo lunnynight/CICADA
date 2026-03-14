@@ -99,6 +99,15 @@ class InstallerService {
     return Process.start(pm, args, runInShell: true);
   }
 
+  /// Uninstall OpenClaw via package manager
+  static Future<Process> uninstallOpenClaw() async {
+    final pm = await _detectPkgManager();
+    final args = pm == 'pnpm'
+        ? ['remove', '-g', 'openclaw']
+        : ['uninstall', '-g', 'openclaw'];
+    return Process.start(pm, args, runInShell: true);
+  }
+
   static Future<ProcessResult> startService() async {
     final bin = await _resolveOpenClawPath();
     return Process.run(bin, ['start'], runInShell: true);
