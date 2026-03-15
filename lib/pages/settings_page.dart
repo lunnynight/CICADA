@@ -103,13 +103,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (confirmed != true) return;
 
+    if (!mounted) return;
+
     // Show backup confirmation
     final backupConfirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => _buildBackupConfirmDialog(ctx),
     );
 
-    if (backupConfirmed == null) return; // Cancelled
+    if (backupConfirmed == null || !mounted) return; // Cancelled
 
     setState(() {
       _downloadingUpdate = true;
@@ -384,6 +386,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     // Show terminal dialog for uninstall process
     final lines = ValueNotifier<List<String>>(['>>> 开始卸载 OpenClaw...']);

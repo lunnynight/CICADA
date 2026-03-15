@@ -311,7 +311,7 @@ class UpdateService {
     await for (final chunk in response) {
       sink.add(chunk);
       receivedBytes += chunk.length;
-      if (totalBytes != null && totalBytes > 0 && onProgress != null) {
+      if (onProgress != null && totalBytes > 0) {
         onProgress(receivedBytes / totalBytes);
       }
     }
