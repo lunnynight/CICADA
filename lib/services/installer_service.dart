@@ -71,6 +71,32 @@ class InstallerService {
     }
   }
 
+  /// Check if OpenClaw is installed (binary exists)
+  static Future<bool> isOpenClawInstalled() async {
+    final result = await checkOpenClaw();
+    return result.exitCode == 0;
+  }
+
+  /// Check if OpenClaw Gateway is running (port 1933)
+  static Future<bool> isGatewayRunning() async {
+    try {
+      final socket = await Socket.connect('127.0.0.1', 1933, timeout: const Duration(seconds: 2));
+      await socket.close();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Get OpenClaw status
+  static Future<OpenClawStatus> getOpenClawStatus() async {
+    final installed = await isOpenClawInstalled();
+    if (!installed) return OpenClawStatus.notInstalled;
+
+    final running = await isGatewayRunning();
+    return running ? OpenClawStatus.running : OpenClawStatus.installed;
+  }
+
   static Future<Process> installNodejs({String? mirrorUrl}) async {
     if (Platform.isWindows) {
       return Process.start('winget', [
@@ -369,4 +395,11 @@ class StreamGroup {
 
     return controller.stream;
   }
+}
+
+/// OpenClaw installation and runtime status
+enum OpenClawStatus {
+  notInstalled,
+  installed,
+  running,
 }

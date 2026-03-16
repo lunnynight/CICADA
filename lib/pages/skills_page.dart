@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/cicada_colors.dart';
 import '../services/bundled_skill_service.dart';
+import '../services/installer_service.dart';
 
 class SkillModel {
   final String name;
@@ -65,6 +66,7 @@ class _SkillsPageState extends State<SkillsPage> {
   bool _syncing = false;
   String _search = '';
   String _categoryFilter = '全部';
+  OpenClawStatus _openclawStatus = OpenClawStatus.notInstalled;
 
   static const _categories = ['全部', '内置', '已安装', '代码质量', '文档', '测试'];
 
@@ -75,7 +77,16 @@ class _SkillsPageState extends State<SkillsPage> {
   }
 
   Future<void> _loadData() async {
-    await Future.wait([_fetchSkills(), _loadInstalled()]);
+    await Future.wait([
+      _fetchSkills(),
+      _loadInstalled(),
+      _checkOpenClawStatus(),
+    ]);
+  }
+
+  Future<void> _checkOpenClawStatus() async {
+    final status = await InstallerService.getOpenClawStatus();
+    if (mounted) setState(() => _openclawStatus = status);
   }
 
   Future<void> _fetchSkills() async {
@@ -245,10 +256,9 @@ class _SkillsPageState extends State<SkillsPage> {
   Future<void> _uninstall(SkillModel skill) async {
     setState(() => _installing.add(skill.name));
     try {
-      // Uninstall bundled skill by removing from Claude skills directory
-      final skillDir = Directory(
-        '${Platform.environment['HOME']}/.claude/skills/${skill.name}',
-      );
+      // Uninstall bundled skill by removing from OpenClaw skills directory
+      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
+      final skillDir = Directory('$home/.openclaw/skills/${skill.name}');
       if (await skillDir.exists()) {
         await skillDir.delete(recursive: true);
       }
@@ -359,6 +369,51 @@ class _SkillsPageState extends State<SkillsPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              // OpenClaw status warning
+              if (_openclawStatus != OpenClawStatus.running)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _openclawStatus == OpenClawStatus.notInstalled
+                        ? CicadaColors.error.withValues(alpha: 0.1)
+                        : CicadaColors.warning.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: _openclawStatus == OpenClawStatus.notInstalled
+                          ? CicadaColors.error.withValues(alpha: 0.3)
+                          : CicadaColors.warning.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _openclawStatus == OpenClawStatus.notInstalled
+                            ? Icons.error_outline
+                            : Icons.warning_amber_outlined,
+                        color: _openclawStatus == OpenClawStatus.notInstalled
+                            ? CicadaColors.error
+                            : CicadaColors.warning,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _openclawStatus == OpenClawStatus.notInstalled
+                              ? 'OpenClaw 未安装 - 技能功能不可用'
+                              : 'OpenClaw Gateway 未运行 - 请先启动 OpenClaw',
+                          style: TextStyle(
+                            color: _openclawStatus == OpenClawStatus.notInstalled
+                                ? CicadaColors.error
+                                : CicadaColors.warning,
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               // Tactical search field
               TextField(
                 style: const TextStyle(
@@ -532,6 +587,7 @@ class _SkillsPageState extends State<SkillsPage> {
                         skill: skill,
                         isInstalled: isInstalled,
                         isInstalling: isInstalling,
+                        openclawRunning: _openclawStatus == OpenClawStatus.running,
                         onInstall: () => _install(skill),
                         onUninstall: () => _uninstall(skill),
                       );
@@ -608,6 +664,7 @@ class _SkillCard extends StatelessWidget {
   final SkillModel skill;
   final bool isInstalled;
   final bool isInstalling;
+  final bool openclawRunning;
   final VoidCallback onInstall;
   final VoidCallback onUninstall;
 
@@ -615,6 +672,7 @@ class _SkillCard extends StatelessWidget {
     required this.skill,
     required this.isInstalled,
     required this.isInstalling,
+    required this.openclawRunning,
     required this.onInstall,
     required this.onUninstall,
   });
@@ -803,12 +861,12 @@ class _SkillCard extends StatelessWidget {
                               )
                               : isInstalled
                               ? OutlinedButton(
-                                onPressed: onUninstall,
+                                onPressed: openclawRunning ? onUninstall : null,
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(
                                     color: CicadaColors.border,
                                   ),
-                                  foregroundColor: CicadaColors.muted,
+                                  foregroundColor: openclawRunning ? CicadaColors.muted : CicadaColors.textTertiary,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(3),
                                   ),
@@ -821,13 +879,15 @@ class _SkillCard extends StatelessWidget {
                                 child: const Text('[ REMOVE ]'),
                               )
                               : ElevatedButton(
-                                onPressed: onInstall,
+                                onPressed: openclawRunning ? onInstall : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
                                       skill.isBundled
                                           ? CicadaColors.accent
                                           : CicadaColors.data,
                                   foregroundColor: Colors.white,
+                                  disabledBackgroundColor: CicadaColors.surface,
+                                  disabledForegroundColor: CicadaColors.textTertiary,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(3),
                                   ),

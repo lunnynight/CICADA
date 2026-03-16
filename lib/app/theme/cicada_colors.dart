@@ -18,6 +18,7 @@ class CicadaColors {
   static const ok = Color(0xFF3FB950); // Success, installed
   static const alert = Color(0xFFFF7B72); // Error, danger
   static const error = Color(0xFFFF7B72); // Alias for alert
+  static const warning = Color(0xFFFFB84D); // Alias for accent
   static const info = Color(0xFF55D0FF); // Alias for energy
   static const muted = Color(0xFF8B949E); // Secondary text
 
