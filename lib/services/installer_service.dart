@@ -77,10 +77,10 @@ class InstallerService {
     return result.exitCode == 0;
   }
 
-  /// Check if OpenClaw Gateway is running (port 1933)
+  /// Check if OpenClaw Gateway is running (port 18789)
   static Future<bool> isGatewayRunning() async {
     try {
-      final socket = await Socket.connect('127.0.0.1', 1933, timeout: const Duration(seconds: 2));
+      final socket = await Socket.connect('127.0.0.1', 18789, timeout: const Duration(seconds: 2));
       await socket.close();
       return true;
     } catch (_) {
