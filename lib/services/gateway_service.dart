@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
+import '../core/platform/platform_info.dart';
+import '../core/platform/shell_env.dart';
+import 'termux_bridge.dart';
 
 /// Service for communicating with OpenClaw Gateway WebSocket API
 class GatewayService {
@@ -143,15 +146,20 @@ class GatewayService {
   /// Get active sessions
   static Future<List<Session>> getSessions() async {
     try {
-      final result = await Process.run('openclaw', [
-        'sessions',
-        '--json',
-      ], runInShell: true);
-      if (result.exitCode == 0) {
-        final data = json.decode(result.stdout.toString());
-        final List<dynamic> sessions = data['sessions'] ?? [];
-        return sessions.map((s) => Session.fromJson(s)).toList();
+      final String output;
+      if (PlatformInfo.needsTermux) {
+        final r = await TermuxBridge.runCommand('openclaw', args: ['sessions', '--json']);
+        output = r.stdout;
+      } else {
+        final env = await ShellEnv.getEnv();
+        final result = await Process.run('openclaw', ['sessions', '--json'],
+            runInShell: true, environment: env);
+        if (result.exitCode != 0) return [];
+        output = result.stdout.toString();
       }
+      final data = json.decode(output);
+      final List<dynamic> sessions = data['sessions'] ?? [];
+      return sessions.map((s) => Session.fromJson(s)).toList();
     } catch (e) {
       _log('Failed to get sessions: $e', level: 'error');
     }
@@ -161,16 +169,20 @@ class GatewayService {
   /// Get channels
   static Future<List<Channel>> getChannels() async {
     try {
-      final result = await Process.run('openclaw', [
-        'channels',
-        'list',
-        '--json',
-      ], runInShell: true);
-      if (result.exitCode == 0) {
-        final data = json.decode(result.stdout.toString());
-        final List<dynamic> channels = data['channels'] ?? [];
-        return channels.map((c) => Channel.fromJson(c)).toList();
+      final String output;
+      if (PlatformInfo.needsTermux) {
+        final r = await TermuxBridge.runCommand('openclaw', args: ['channels', 'list', '--json']);
+        output = r.stdout;
+      } else {
+        final env = await ShellEnv.getEnv();
+        final result = await Process.run('openclaw', ['channels', 'list', '--json'],
+            runInShell: true, environment: env);
+        if (result.exitCode != 0) return [];
+        output = result.stdout.toString();
       }
+      final data = json.decode(output);
+      final List<dynamic> channels = data['channels'] ?? [];
+      return channels.map((c) => Channel.fromJson(c)).toList();
     } catch (e) {
       _log('Failed to get channels: $e', level: 'error');
     }
@@ -183,12 +195,19 @@ class GatewayService {
     bool verbose = false,
   }) async {
     try {
+      if (PlatformInfo.needsTermux) {
+        final args = ['channels', 'login', '--channel', channel];
+        if (verbose) args.add('--verbose');
+        final r = await TermuxBridge.runCommand('openclaw', args: args);
+        return r.isSuccess;
+      }
+
       final args = ['channels', 'login', '--channel', channel];
       if (verbose) args.add('--verbose');
 
-      final process = await Process.start('openclaw', args, runInShell: true);
-
-      // Wait for process to complete or timeout
+      final env = await ShellEnv.getEnv();
+      final process = await Process.start('openclaw', args,
+          runInShell: true, environment: env);
       final exitCode = await process.exitCode.timeout(
         const Duration(minutes: 2),
         onTimeout: () {
@@ -196,7 +215,6 @@ class GatewayService {
           return -1;
         },
       );
-
       return exitCode == 0;
     } catch (e) {
       _log('Failed to login to channel: $e', level: 'error');
@@ -210,19 +228,23 @@ class GatewayService {
     int limit = 20,
   }) async {
     try {
-      final result = await Process.run('openclaw', [
-        'memory',
-        'search',
-        query,
-        '--limit',
-        limit.toString(),
-        '--json',
-      ], runInShell: true);
-      if (result.exitCode == 0) {
-        final data = json.decode(result.stdout.toString());
-        final List<dynamic> entries = data['results'] ?? [];
-        return entries.map((e) => MemoryEntry.fromJson(e)).toList();
+      final String output;
+      if (PlatformInfo.needsTermux) {
+        final r = await TermuxBridge.runCommand('openclaw', args: [
+          'memory', 'search', query, '--limit', limit.toString(), '--json',
+        ]);
+        output = r.stdout;
+      } else {
+        final env = await ShellEnv.getEnv();
+        final result = await Process.run('openclaw', [
+          'memory', 'search', query, '--limit', limit.toString(), '--json',
+        ], runInShell: true, environment: env);
+        if (result.exitCode != 0) return [];
+        output = result.stdout.toString();
       }
+      final data = json.decode(output);
+      final List<dynamic> entries = data['results'] ?? [];
+      return entries.map((e) => MemoryEntry.fromJson(e)).toList();
     } catch (e) {
       _log('Failed to search memory: $e', level: 'error');
     }
@@ -232,17 +254,23 @@ class GatewayService {
   /// Get logs via RPC
   static Future<List<LogEntry>> getLogs({int lines = 100}) async {
     try {
-      final result = await Process.run('openclaw', [
-        'logs',
-        '--lines',
-        lines.toString(),
-        '--json',
-      ], runInShell: true);
-      if (result.exitCode == 0) {
-        final data = json.decode(result.stdout.toString());
-        final List<dynamic> entries = data['logs'] ?? [];
-        return entries.map((l) => LogEntry.fromJson(l)).toList();
+      final String output;
+      if (PlatformInfo.needsTermux) {
+        final r = await TermuxBridge.runCommand('openclaw', args: [
+          'logs', '--lines', lines.toString(), '--json',
+        ]);
+        output = r.stdout;
+      } else {
+        final env = await ShellEnv.getEnv();
+        final result = await Process.run('openclaw', [
+          'logs', '--lines', lines.toString(), '--json',
+        ], runInShell: true, environment: env);
+        if (result.exitCode != 0) return [];
+        output = result.stdout.toString();
       }
+      final data = json.decode(output);
+      final List<dynamic> entries = data['logs'] ?? [];
+      return entries.map((l) => LogEntry.fromJson(l)).toList();
     } catch (e) {
       _log('Failed to get logs: $e', level: 'error');
     }
@@ -251,12 +279,22 @@ class GatewayService {
 
   /// Stream logs in real-time
   static Stream<LogEntry> streamLogs() async* {
+    if (PlatformInfo.needsTermux) {
+      // On Android, poll logs periodically instead of streaming
+      while (true) {
+        final logs = await getLogs(lines: 20);
+        for (final log in logs) {
+          yield log;
+        }
+        await Future.delayed(const Duration(seconds: 3));
+      }
+    }
+
     try {
+      final env = await ShellEnv.getEnv();
       final process = await Process.start('openclaw', [
-        'logs',
-        '--follow',
-        '--json',
-      ], runInShell: true);
+        'logs', '--follow', '--json',
+      ], runInShell: true, environment: env);
 
       await for (final line in process.stdout
           .transform(const SystemEncoding().decoder)
@@ -264,9 +302,7 @@ class GatewayService {
         try {
           final data = json.decode(line);
           yield LogEntry.fromJson(data);
-        } catch (_) {
-          // Skip invalid lines
-        }
+        } catch (_) {}
       }
     } catch (e) {
       _log('Failed to stream logs: $e', level: 'error');
@@ -280,24 +316,26 @@ class GatewayService {
     bool deliver = false,
   }) async {
     try {
-      final args = ['agent'];
-      if (to != null) {
-        args.addAll(['--to', to]);
-      }
-      if (message != null) {
-        args.addAll(['--message', message]);
-      }
-      if (deliver) {
-        args.add('--deliver');
-      }
+      final args = <String>['agent'];
+      if (to != null) args.addAll(['--to', to]);
+      if (message != null) args.addAll(['--message', message]);
+      if (deliver) args.add('--deliver');
       args.add('--json');
 
-      final result = await Process.run('openclaw', args, runInShell: true);
-
-      if (result.exitCode == 0) {
-        final data = json.decode(result.stdout.toString());
-        return AgentResult.fromJson(data);
+      final String output;
+      if (PlatformInfo.needsTermux) {
+        final r = await TermuxBridge.runCommand('openclaw', args: args);
+        if (!r.isSuccess) return null;
+        output = r.stdout;
+      } else {
+        final env = await ShellEnv.getEnv();
+        final result = await Process.run('openclaw', args,
+            runInShell: true, environment: env);
+        if (result.exitCode != 0) return null;
+        output = result.stdout.toString();
       }
+      final data = json.decode(output);
+      return AgentResult.fromJson(data);
     } catch (e) {
       _log('Failed to run agent: $e', level: 'error');
     }

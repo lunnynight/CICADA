@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app/theme/cicada_colors.dart';
+import '../core/platform/platform_info.dart';
 import '../services/installer_service.dart';
+import '../services/termux_bridge.dart';
 import '../widgets/terminal_output.dart';
 
 /// Step status for three-state visualization
@@ -34,6 +36,10 @@ class _SetupPageState extends State<SetupPage> {
   String _clawVersion = '';
   String _bundledNodeVersion = '';
   String _bundledOpenClawVersion = '';
+  // Android/Termux state
+  bool _termuxInstalled = false;
+  bool _termuxConfiguring = false;
+  final List<String> _termuxConfigLog = [];
 
   @override
   void initState() {
@@ -43,15 +49,46 @@ class _SetupPageState extends State<SetupPage> {
 
   Future<void> _detect() async {
     setState(() => _detecting = true);
-    final nodeResult = await InstallerService.checkNode();
+
+    // Android: check Termux first
+    if (PlatformInfo.needsTermux) {
+      final termuxOk = await TermuxBridge.isTermuxInstalled();
+      if (!mounted) return;
+      setState(() => _termuxInstalled = termuxOk);
+      if (termuxOk) {
+        // Check Node (with version >= 22) and OpenClaw inside Termux
+        final nodeCheck = await InstallerService.isNodeVersionSufficient();
+        final clawResult = await InstallerService.checkOpenClaw();
+        if (!mounted) return;
+        setState(() {
+          _nodeInstalled = nodeCheck.sufficient;
+          _openclawInstalled = clawResult.exitCode == 0;
+          _nodeVersion = nodeCheck.raw;
+          _clawVersion = _openclawInstalled ? (clawResult.stdout as String).trim() : '';
+          _bundledAvailable = false; // No bundled on Android
+          _detecting = false;
+        });
+      } else {
+        setState(() {
+          _nodeInstalled = false;
+          _openclawInstalled = false;
+          _bundledAvailable = false;
+          _detecting = false;
+        });
+      }
+      return;
+    }
+
+    // Desktop flow — require Node >= 22
+    final nodeCheck = await InstallerService.isNodeVersionSufficient();
     final clawResult = await InstallerService.checkOpenClaw();
     final bundledAvailable = await InstallerService.isBundledAvailable();
     final bundledVersions = await InstallerService.getBundledVersions();
     if (!mounted) return;
     setState(() {
-      _nodeInstalled = nodeResult.exitCode == 0;
+      _nodeInstalled = nodeCheck.sufficient;
       _openclawInstalled = clawResult.exitCode == 0;
-      _nodeVersion = _nodeInstalled ? (nodeResult.stdout as String).trim() : '';
+      _nodeVersion = nodeCheck.raw;
       _clawVersion =
           _openclawInstalled ? (clawResult.stdout as String).trim() : '';
       _bundledAvailable = bundledAvailable;
@@ -166,6 +203,90 @@ class _SetupPageState extends State<SetupPage> {
   int get _openclawStepIndex => _bundledAvailable ? 2 : 3;
   int get _completeStepIndex => _bundledAvailable ? 3 : 4;
   int get _totalSteps => _bundledAvailable ? 4 : 5;
+
+  // ==================== Android/Termux Auto-Configuration ====================
+
+  Future<void> _runTermuxAutoConfig() async {
+    setState(() {
+      _termuxConfiguring = true;
+      _termuxConfigLog.clear();
+    });
+    try {
+      await for (final msg in TermuxBridge.autoConfigureTermux()) {
+        if (!mounted) return;
+        setState(() => _termuxConfigLog.add(msg));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _termuxConfigLog.add('错误: $e'));
+    } finally {
+      if (mounted) {
+        setState(() => _termuxConfiguring = false);
+        // Re-detect after auto-config
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) await _detect();
+      }
+    }
+  }
+
+  // ==================== Android/Termux Installation ====================
+
+  Future<void> _runTermuxInstallNode() async {
+    setState(() {
+      _installing = true;
+      _logLines.clear();
+      _logLines.add('>>> 通过 Termux pkg 安装 Node.js ...');
+    });
+    try {
+      final result = await TermuxBridge.installNode();
+      if (!mounted) return;
+      setState(() {
+        _logLines.add(result.stdout.isNotEmpty ? result.stdout : '命令已发送到 Termux');
+        if (result.stderr.isNotEmpty) _logLines.add(result.stderr);
+        _logLines.add(result.isSuccess ? '\n✓ 安装命令已执行' : '\n✗ 安装失败');
+        _logLines.add('请等待 Termux 完成安装后点击"重新检测"');
+        _installing = false;
+      });
+      // Wait a bit then re-detect
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) await _detect();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _logLines.add('错误: $e');
+        _installing = false;
+      });
+    }
+  }
+
+  Future<void> _runTermuxInstallOpenClaw() async {
+    setState(() {
+      _installing = true;
+      _logLines.clear();
+      _logLines.add('>>> 通过 Termux npm 安装 OpenClaw ...');
+    });
+    try {
+      final result = await TermuxBridge.installOpenClaw(
+        mirrorUrl: _selectedMirror,
+      );
+      if (!mounted) return;
+      setState(() {
+        _logLines.add(result.stdout.isNotEmpty ? result.stdout : '命令已发送到 Termux');
+        if (result.stderr.isNotEmpty) _logLines.add(result.stderr);
+        _logLines.add(result.isSuccess ? '\n✓ 安装命令已执行' : '\n✗ 安装失败');
+        _logLines.add('请等待 Termux 完成安装后点击"重新检测"');
+        _installing = false;
+      });
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) await _detect();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _logLines.add('错误: $e');
+        _installing = false;
+      });
+    }
+  }
 
   /// Get status for each step
   StepStatus _getStepStatus(int step) {
@@ -546,6 +667,108 @@ class _SetupPageState extends State<SetupPage> {
               ),
             )
           else ...[
+            // Android: show Termux status first
+            if (PlatformInfo.needsTermux) ...[
+              _buildCheckItem('Termux', _termuxInstalled, ''),
+              const SizedBox(height: 12),
+              if (!_termuxInstalled) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: CicadaColors.alert.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CicadaColors.alert.withAlpha(100)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Android 需要 Termux 作为 Node.js 运行时',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: () => TermuxBridge.openUrl(
+                          'https://f-droid.org/packages/com.termux/',
+                        ),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('从 F-Droid 下载 Termux'),
+                        style: FilledButton.styleFrom(backgroundColor: CicadaColors.data),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              // Termux installed: offer auto-configuration via accessibility
+              if (_termuxInstalled) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: CicadaColors.data.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CicadaColors.data.withAlpha(100)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Termux 自动配置',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '通过无障碍服务自动配置 allow-external-apps，'
+                        '免去手动操作',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: CicadaColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: _termuxConfiguring ? null : _runTermuxAutoConfig,
+                        icon: _termuxConfiguring
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.accessibility_new, size: 16),
+                        label: Text(_termuxConfiguring ? '配置中...' : '一键配置 Termux'),
+                        style: FilledButton.styleFrom(backgroundColor: CicadaColors.data),
+                      ),
+                      if (_termuxConfigLog.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: CicadaColors.surface,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(maxHeight: 120),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _termuxConfigLog.length,
+                            itemBuilder: (context, index) => Text(
+                              _termuxConfigLog[index],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
             _buildCheckItem('Node.js', _nodeInstalled, _nodeVersion),
             const SizedBox(height: 12),
             _buildCheckItem('OpenClaw', _openclawInstalled, _clawVersion),
@@ -734,8 +957,9 @@ class _SetupPageState extends State<SetupPage> {
 
   Widget _buildInstallNodeStep() {
     final isBundled = _bundledAvailable;
+    final isAndroid = PlatformInfo.needsTermux;
     return _buildStepCard(
-      title: isBundled ? '解压 Node.js' : '安装 Node.js',
+      title: isAndroid ? '安装 Node.js (Termux)' : (isBundled ? '解压 Node.js' : '安装 Node.js'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -761,7 +985,28 @@ class _SetupPageState extends State<SetupPage> {
               ),
             )
           else ...[
-            if (isBundled) ...[
+            if (isAndroid) ...[
+              const Text('将通过 Termux 的 pkg 安装 Node.js'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  FilledButton.icon(
+                    onPressed: _installing ? null : () => _runTermuxInstallNode(),
+                    icon: _installing
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.download),
+                    label: Text(_installing ? '安装中...' : '安装 Node.js'),
+                    style: FilledButton.styleFrom(backgroundColor: CicadaColors.data),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: _installing ? null : _detect,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重新检测'),
+                  ),
+                ],
+              ),
+            ] else if (isBundled) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -850,8 +1095,9 @@ class _SetupPageState extends State<SetupPage> {
 
   Widget _buildInstallClawStep() {
     final isBundled = _bundledAvailable;
+    final isAndroid = PlatformInfo.needsTermux;
     return _buildStepCard(
-      title: isBundled ? '安装 OpenClaw (离线)' : '安装 OpenClaw',
+      title: isAndroid ? '安装 OpenClaw (Termux)' : (isBundled ? '安装 OpenClaw (离线)' : '安装 OpenClaw'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -893,7 +1139,28 @@ class _SetupPageState extends State<SetupPage> {
               ),
             )
           else ...[
-            if (isBundled)
+            if (isAndroid) ...[
+              const Text('将通过 Termux 的 npm 全局安装 OpenClaw'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  FilledButton.icon(
+                    onPressed: _installing ? null : () => _runTermuxInstallOpenClaw(),
+                    icon: _installing
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.download),
+                    label: Text(_installing ? '安装中...' : '安装 OpenClaw'),
+                    style: FilledButton.styleFrom(backgroundColor: CicadaColors.data),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: _installing ? null : _detect,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重新检测'),
+                  ),
+                ],
+              ),
+            ] else if (isBundled)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

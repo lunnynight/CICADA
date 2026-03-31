@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/cicada_colors.dart';
+import '../../../services/installer_service.dart';
 import '../../../widgets/terminal_output.dart';
 import '../logic/setup_state.dart';
+
+/// Target for installation panel
+enum InstallTarget { node, openclaw, claudeCode }
 
 /// Installation panel widget
 class InstallationPanel extends ConsumerWidget {
   final String title;
   final String description;
-  final bool isNode;
+  final InstallTarget target;
   final bool useBundled;
 
   const InstallationPanel({
     super.key,
     required this.title,
     required this.description,
-    required this.isNode,
+    required this.target,
     this.useBundled = false,
   });
 
@@ -24,8 +28,17 @@ class InstallationPanel extends ConsumerWidget {
     final state = ref.watch(setupStateProvider);
     final notifier = ref.read(setupStateProvider.notifier);
 
-    final isInstalled = isNode ? state.nodeInstalled : state.openclawInstalled;
-    final version = isNode ? state.nodeVersion : state.clawVersion;
+    final isInstalled = switch (target) {
+      InstallTarget.node => state.nodeInstalled,
+      InstallTarget.openclaw => state.openclawInstalled,
+      InstallTarget.claudeCode => state.claudeCodeInstalled,
+    };
+    final version = switch (target) {
+      InstallTarget.node => state.nodeVersion,
+      InstallTarget.openclaw => state.clawVersion,
+      InstallTarget.claudeCode => state.claudeCodeVersion,
+    };
+    final isNode = target == InstallTarget.node;
 
     return Card(
       color: CicadaColors.surface,
@@ -125,7 +138,15 @@ class InstallationPanel extends ConsumerWidget {
                     const SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: () {
-                        if (useBundled) {
+                        if (target == InstallTarget.claudeCode) {
+                          // Claude Code: always online install via npm
+                          notifier.runInstall(
+                            () => InstallerService.installClaudeCode(
+                              mirrorUrl: state.selectedMirror,
+                            ),
+                            title,
+                          );
+                        } else if (useBundled) {
                           notifier.runBundledInstall(
                             isNode: isNode,
                             name: title,
@@ -137,7 +158,11 @@ class InstallationPanel extends ConsumerWidget {
                           );
                         }
                       },
-                      child: Text(useBundled ? '离线安装' : '在线安装'),
+                      child: Text(target == InstallTarget.claudeCode
+                          ? '安装'
+                          : useBundled
+                              ? '离线安装'
+                              : '在线安装'),
                     ),
                   ],
                 )

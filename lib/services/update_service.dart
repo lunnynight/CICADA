@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:pub_semver/pub_semver.dart';
 
 class UpdateInfo {
   final bool hasUpdate;
@@ -79,21 +80,13 @@ class UpdateService {
   }
 
   static bool _isNewer(String remote, String current) {
-    final r = _parseVersion(remote);
-    final c = _parseVersion(current);
-    for (int i = 0; i < 3; i++) {
-      if (r[i] > c[i]) return true;
-      if (r[i] < c[i]) return false;
+    try {
+      final remoteVer = Version.parse(remote);
+      final currentVer = Version.parse(current);
+      return remoteVer > currentVer;
+    } catch (_) {
+      return false;
     }
-    return false;
-  }
-
-  static List<int> _parseVersion(String v) {
-    final parts = v.split('.');
-    return List.generate(
-      3,
-      (i) => i < parts.length ? (int.tryParse(parts[i]) ?? 0) : 0,
-    );
   }
 
   /// Create backup of current application before update

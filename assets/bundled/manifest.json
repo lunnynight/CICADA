@@ -30,6 +30,5 @@
   "openclaw": {
     "package": "openclaw-0.1.8.tgz",
     "version": "0.1.8"
-  },
-  "note": "Run 'dart scripts/prepare_bundled_deps.dart' to download actual binaries"
+  }
 }

@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import '../core/platform/shell_env.dart';
 
 /// Service for handling offline/bundled installation of Node.js and OpenClaw.
 /// Extracts bundled assets to the application support directory and manages
@@ -379,9 +380,10 @@ class BundledInstallerService {
   /// Check if OpenClaw is installed locally (via bundled installer)
   static Future<bool> isOpenClawInstalled() async {
     try {
+      final env = await ShellEnv.getEnv();
       final result = await Process.run('openclaw', [
         '--version',
-      ], runInShell: true);
+      ], runInShell: true, environment: env);
       return result.exitCode == 0;
     } catch (e) {
       return false;

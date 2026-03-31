@@ -8,6 +8,7 @@ class HudPanel extends StatelessWidget {
     required this.child,
     this.title,
     this.titleIcon,
+    this.headerAction,
     this.accent,
     this.padding = const EdgeInsets.all(20),
     this.cornerSize = 8.0,
@@ -17,6 +18,7 @@ class HudPanel extends StatelessWidget {
   final Widget child;
   final String? title;
   final IconData? titleIcon;
+  final Widget? headerAction;
   final Color? accent;
   final EdgeInsets padding;
   final double cornerSize;
@@ -43,10 +45,17 @@ class HudPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _HudTitle(
-                      title: title!,
-                      icon: titleIcon,
-                      accent: accentColor,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _HudTitle(
+                            title: title!,
+                            icon: titleIcon,
+                            accent: accentColor,
+                          ),
+                        ),
+                        if (headerAction != null) headerAction!,
+                      ],
                     ),
                     const SizedBox(height: 16),
                     child,

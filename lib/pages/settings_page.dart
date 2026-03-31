@@ -8,6 +8,8 @@ import '../services/config_service.dart';
 import '../services/installer_service.dart';
 import '../services/update_service.dart';
 import '../services/integration_service.dart';
+import '../services/proxy_service.dart';
+import '../models/proxy_config.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -35,6 +37,15 @@ class _SettingsPageState extends State<SettingsPage> {
   final _feishuSecretCtrl = TextEditingController();
   final _feishuWebhookCtrl = TextEditingController();
 
+  // Proxy state
+  ProxyConfig _proxyConfig = const ProxyConfig.disabled();
+  bool _testingProxy = false;
+  Map<String, ({bool ok, int latencyMs, String? error})>? _proxyTestResults;
+  final _proxyHostCtrl = TextEditingController();
+  final _proxyPortCtrl = TextEditingController();
+  final _proxyUserCtrl = TextEditingController();
+  final _proxyPassCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +57,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _feishuAppIdCtrl.dispose();
     _feishuSecretCtrl.dispose();
     _feishuWebhookCtrl.dispose();
+    _proxyHostCtrl.dispose();
+    _proxyPortCtrl.dispose();
+    _proxyUserCtrl.dispose();
+    _proxyPassCtrl.dispose();
     super.dispose();
   }
 
@@ -57,6 +72,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final config = await ConfigService.readConfig();
     final feishuCreds = await FeishuService.getCredentials();
     final backup = await UpdateService.getLatestBackup();
+    final proxyConfig = await ProxyService.loadConfig();
     if (!mounted) return;
     setState(() {
       _configPath = '$home/.openclaw/openclaw.json';
@@ -64,6 +80,11 @@ class _SettingsPageState extends State<SettingsPage> {
           config['npmMirror'] as String? ?? 'https://registry.npmmirror.com';
       _feishuCreds = feishuCreds;
       _latestBackup = backup;
+      _proxyConfig = proxyConfig;
+      _proxyHostCtrl.text = proxyConfig.host;
+      _proxyPortCtrl.text = proxyConfig.port > 0 ? proxyConfig.port.toString() : '';
+      _proxyUserCtrl.text = proxyConfig.username ?? '';
+      _proxyPassCtrl.text = proxyConfig.password ?? '';
     });
   }
 
@@ -510,6 +531,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ]),
           const SizedBox(height: 24),
+          _buildProxySection(),
+          const SizedBox(height: 24),
           _buildIntegrationSection(),
           const SizedBox(height: 24),
           _buildSection('关于', [
@@ -711,6 +734,230 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       trailing: trailing,
     );
+  }
+
+  // Proxy Settings Section
+  Widget _buildProxySection() {
+    return _buildSection('网络代理（加速器）', [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Text(
+          '国内网络可能无法直接访问 AI API，配置代理后可正常使用',
+          style: TextStyle(fontSize: 12, color: CicadaColors.textTertiary),
+        ),
+      ),
+      SwitchListTile(
+        title: const Text('启用代理'),
+        value: _proxyConfig.enabled,
+        onChanged: (v) {
+          setState(() => _proxyConfig = _proxyConfig.copyWith(enabled: v));
+          _saveProxy();
+        },
+        activeTrackColor: CicadaColors.ok,
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            const Text('类型：', style: TextStyle(fontSize: 13)),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('HTTP'),
+              selected: _proxyConfig.type == ProxyType.http,
+              onSelected: (_) {
+                setState(() => _proxyConfig = _proxyConfig.copyWith(type: ProxyType.http));
+              },
+              selectedColor: CicadaColors.accent,
+              visualDensity: VisualDensity.compact,
+              showCheckmark: false,
+            ),
+            const SizedBox(width: 6),
+            ChoiceChip(
+              label: const Text('SOCKS5'),
+              selected: _proxyConfig.type == ProxyType.socks5,
+              onSelected: (_) {
+                setState(() => _proxyConfig = _proxyConfig.copyWith(type: ProxyType.socks5));
+              },
+              selectedColor: CicadaColors.accent,
+              visualDensity: VisualDensity.compact,
+              showCheckmark: false,
+            ),
+            const SizedBox(width: 6),
+            ChoiceChip(
+              label: const Text('系统代理'),
+              selected: _proxyConfig.type == ProxyType.system,
+              onSelected: (_) {
+                setState(() => _proxyConfig = _proxyConfig.copyWith(type: ProxyType.system));
+              },
+              selectedColor: CicadaColors.accent,
+              visualDensity: VisualDensity.compact,
+              showCheckmark: false,
+            ),
+          ],
+        ),
+      ),
+      if (_proxyConfig.type != ProxyType.system && _proxyConfig.type != ProxyType.none)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _proxyHostCtrl,
+                  decoration: InputDecoration(
+                    labelText: '地址',
+                    hintText: '127.0.0.1',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: TextField(
+                  controller: _proxyPortCtrl,
+                  decoration: InputDecoration(
+                    labelText: '端口',
+                    hintText: '7897',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+        ),
+      if (_proxyConfig.type != ProxyType.system && _proxyConfig.type != ProxyType.none)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _proxyUserCtrl,
+                  decoration: InputDecoration(
+                    labelText: '用户名（可选）',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _proxyPassCtrl,
+                  decoration: InputDecoration(
+                    labelText: '密码（可选）',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  obscureText: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: _testingProxy ? null : _testProxy,
+              icon: _testingProxy
+                  ? const SizedBox(
+                      width: 14, height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.speed, size: 16),
+              label: const Text('测试连通性'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: _saveProxy,
+              icon: const Icon(Icons.save, size: 16),
+              label: const Text('保存'),
+              style: FilledButton.styleFrom(backgroundColor: CicadaColors.ok),
+            ),
+          ],
+        ),
+      ),
+      if (_proxyTestResults != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            children: _proxyTestResults!.entries.map((e) {
+              final r = e.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      r.ok ? Icons.check_circle : Icons.cancel,
+                      size: 14,
+                      color: r.ok ? CicadaColors.ok : CicadaColors.alert,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(e.key, style: const TextStyle(fontSize: 12)),
+                    const Spacer(),
+                    Text(
+                      r.ok ? '${r.latencyMs}ms' : (r.error ?? '失败'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: r.ok ? CicadaColors.ok : CicadaColors.alert,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+    ]);
+  }
+
+  Future<void> _saveProxy() async {
+    final host = _proxyHostCtrl.text.trim();
+    final port = int.tryParse(_proxyPortCtrl.text.trim()) ?? 0;
+    final user = _proxyUserCtrl.text.trim();
+    final pass = _proxyPassCtrl.text.trim();
+
+    final config = _proxyConfig.copyWith(
+      host: host,
+      port: port,
+      username: user.isNotEmpty ? user : null,
+      password: pass.isNotEmpty ? pass : null,
+    );
+
+    await ProxyService.saveConfig(config);
+    setState(() => _proxyConfig = config);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('代理设置已保存')),
+    );
+  }
+
+  Future<void> _testProxy() async {
+    setState(() {
+      _testingProxy = true;
+      _proxyTestResults = null;
+    });
+
+    // Build config from current UI state
+    final host = _proxyHostCtrl.text.trim();
+    final port = int.tryParse(_proxyPortCtrl.text.trim()) ?? 0;
+    final testConfig = _proxyConfig.copyWith(host: host, port: port, enabled: true);
+
+    final results = await ProxyService.testApiEndpoints(proxy: testConfig);
+
+    if (!mounted) return;
+    setState(() {
+      _testingProxy = false;
+      _proxyTestResults = results;
+    });
   }
 
   // Integration Management Section

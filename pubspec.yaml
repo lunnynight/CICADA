@@ -20,10 +20,17 @@ dependencies:
   fl_chart: ^0.68.0
   super_clipboard: ^0.8.0
   web_socket_channel: ^3.0.2
+  timeago: ^3.7.0
+  pub_semver: ^2.1.4
+  async: ^2.11.0
   # 步骤指示器（替换自定义 StepCard）
   easy_stepper: ^0.8.5
   # 设置页面组件（简化 settings_page.dart）
   flutter_settings_screens: ^0.3.4
+  # WebView 嵌入 OpenClaw UI
+  webview_flutter: ^4.10.0
+  # wkwebview 仅 iOS/macOS，Android 自动选择实现
+  # webview_flutter_wkwebview: ^3.16.0
 
 dev_dependencies:
   flutter_test:

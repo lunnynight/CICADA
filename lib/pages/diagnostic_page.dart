@@ -6,7 +6,9 @@ import '../models/diagnostic.dart';
 import '../services/diagnostic_service.dart';
 
 class DiagnosticPage extends StatefulWidget {
-  const DiagnosticPage({super.key});
+  final void Function(int index)? onNavigate;
+
+  const DiagnosticPage({super.key, this.onNavigate});
 
   @override
   State<DiagnosticPage> createState() => _DiagnosticPageState();
@@ -375,13 +377,13 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
   void _handleAction(DiagnosticAction action) {
     switch (action.id) {
       case 'goto_setup':
-        // TODO: Navigate to setup page
+        widget.onNavigate?.call(1);
         break;
       case 'goto_models':
-        // TODO: Navigate to models page
+        widget.onNavigate?.call(7);
         break;
       case 'goto_dashboard':
-        // TODO: Navigate to dashboard page
+        widget.onNavigate?.call(0);
         break;
       case 'retry':
         _runDiagnostics();

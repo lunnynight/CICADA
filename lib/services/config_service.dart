@@ -3,32 +3,31 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../core/platform/shell_env.dart';
+import '../data/config_repository.dart';
+
+/// Manages OpenClaw provider configuration.
+///
+/// Delegates file I/O to [ConfigRepository] for atomic writes and permissions.
+/// Keeps static API for backward compatibility with existing UI code.
 class ConfigService {
-  static String get _homePath =>
-      Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
+  static final _repo = ConfigRepository();
 
-  static String get configDir => '$_homePath/.openclaw';
-  static String get configPath => '$configDir/openclaw.json';
+  static String get configDir => ConfigRepository.configDir;
+  static String get configPath => ConfigRepository.configPath;
 
+  /// Read config. Returns empty map on any failure (backward compatible).
   static Future<Map<String, dynamic>> readConfig() async {
-    final file = File(configPath);
-    if (!await file.exists()) return {};
-    try {
-      final content = await file.readAsString();
-      return json.decode(content) as Map<String, dynamic>;
-    } catch (_) {
-      return {};
-    }
+    final result = await _repo.readConfig();
+    return result.dataOrNull ?? {};
   }
 
+  /// Write config with atomic write + file permissions.
   static Future<void> writeConfig(Map<String, dynamic> config) async {
-    final dir = Directory(configDir);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+    final result = await _repo.writeConfig(config);
+    if (result.isFailure) {
+      throw StateError(result.errorOrNull!.message);
     }
-    final file = File(configPath);
-    final encoder = const JsonEncoder.withIndent('  ');
-    await file.writeAsString(encoder.convert(config));
   }
 
   /// Add or update a provider in openclaw.json
@@ -74,6 +73,22 @@ class ConfigService {
       }
     }
 
+    await writeConfig(config);
+  }
+
+  /// Switch the default provider (and its default model) in openclaw.json.
+  static Future<void> switchProvider(String providerId) async {
+    final config = await readConfig();
+    final providers = (config['providers'] as Map<String, dynamic>?) ?? {};
+    if (!providers.containsKey(providerId)) {
+      throw StateError('Provider "$providerId" not configured');
+    }
+    config['defaultProvider'] = providerId;
+    final providerConfig = providers[providerId] as Map<String, dynamic>?;
+    final model = providerConfig?['defaultModel'] as String?;
+    if (model != null) {
+      config['defaultModel'] = model;
+    }
     await writeConfig(config);
   }
 
@@ -188,7 +203,9 @@ class ConfigService {
   static Future<List<String>> detectOllamaModels() async {
     // Primary: CLI
     try {
-      final result = await Process.run('ollama', ['list'], runInShell: true);
+      final env = await ShellEnv.getEnv();
+      final result = await Process.run('ollama', ['list'],
+          runInShell: true, environment: env);
       if (result.exitCode == 0) {
         final lines = (result.stdout as String).split('\n');
         final models = <String>[];

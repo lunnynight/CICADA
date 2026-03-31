@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import '../models/diagnostic.dart';
 import 'installer_service.dart';
 import 'config_service.dart';
@@ -15,8 +16,10 @@ class DiagnosticService {
     // Layer 1: Environment checks
     findings.addAll(await _checkNodeJs());
     findings.addAll(await _checkOpenClaw());
+    findings.addAll(await _checkClaudeCode());
     findings.addAll(await _checkConfig());
     findings.addAll(await _checkNetwork());
+    findings.addAll(await _checkApiEndpoints());
 
     // Calculate overall status
     final level = _calculateOverallLevel(findings);
@@ -31,7 +34,7 @@ class DiagnosticService {
     );
   }
 
-  /// Check Node.js installation and version
+  /// Check Node.js installation and version (>= 22 required)
   static Future<List<DiagnosticFinding>> _checkNodeJs() async {
     final findings = <DiagnosticFinding>[];
 
@@ -39,15 +42,31 @@ class DiagnosticService {
       final result = await InstallerService.checkNode();
       if (result.exitCode == 0) {
         final version = (result.stdout as String).trim();
-        findings.add(
-          DiagnosticFinding(
-            id: 'node_ok',
-            level: 'ok',
-            title: 'Node.js 已安装',
-            summary: '检测到 Node.js $version',
-            actions: [],
-          ),
-        );
+        final major = InstallerService.parseNodeMajorVersion(version);
+        if (major != null && major >= 22) {
+          findings.add(
+            DiagnosticFinding(
+              id: 'node_ok',
+              level: 'ok',
+              title: 'Node.js 已安装',
+              summary: '检测到 Node.js $version',
+              actions: [],
+            ),
+          );
+        } else {
+          findings.add(
+            DiagnosticFinding(
+              id: 'node_version_low',
+              level: 'warn',
+              title: 'Node.js 版本过低',
+              summary: '当前版本 $version，需要 >= 22',
+              detail: 'OpenClaw 和 Claude Code 均要求 Node.js >= 22，请升级',
+              actions: [
+                const DiagnosticAction(id: 'goto_setup', label: '前往安装向导'),
+              ],
+            ),
+          );
+        }
       } else {
         findings.add(
           DiagnosticFinding(
@@ -161,6 +180,51 @@ class DiagnosticService {
     return findings;
   }
 
+  /// Check Claude Code installation
+  static Future<List<DiagnosticFinding>> _checkClaudeCode() async {
+    final findings = <DiagnosticFinding>[];
+
+    try {
+      final result = await InstallerService.checkClaudeCode();
+      if (result.exitCode == 0) {
+        final version = (result.stdout as String).trim();
+        findings.add(
+          DiagnosticFinding(
+            id: 'claude_code_ok',
+            level: 'ok',
+            title: 'Claude Code 已安装',
+            summary: '检测到 Claude Code $version',
+            actions: [],
+          ),
+        );
+      } else {
+        findings.add(
+          DiagnosticFinding(
+            id: 'claude_code_missing',
+            level: 'info',
+            title: 'Claude Code 未安装',
+            summary: 'Claude Code 为可选组件，可在安装向导中安装',
+            actions: [
+              const DiagnosticAction(id: 'goto_setup', label: '前往安装向导'),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      findings.add(
+        DiagnosticFinding(
+          id: 'claude_code_check_failed',
+          level: 'warn',
+          title: 'Claude Code 检测失败',
+          summary: '无法检测 Claude Code 状态: $e',
+          actions: [const DiagnosticAction(id: 'retry', label: '重新检测')],
+        ),
+      );
+    }
+
+    return findings;
+  }
+
   /// Check configuration file
   static Future<List<DiagnosticFinding>> _checkConfig() async {
     final findings = <DiagnosticFinding>[];
@@ -227,20 +291,12 @@ class DiagnosticService {
   static Future<List<DiagnosticFinding>> _checkNetwork() async {
     final findings = <DiagnosticFinding>[];
 
-    // Check npm registry connectivity
     try {
-      final result = await Process.run('curl', [
-        '-s',
-        '-o',
-        '/dev/null',
-        '-w',
-        '%{http_code}',
-        '--connect-timeout',
-        '5',
-        'https://registry.npmmirror.com',
-      ], runInShell: true);
-      final code = (result.stdout as String).trim();
-      if (code == '200' || code == '301' || code == '302' || code == '304') {
+      final response = await http
+          .get(Uri.parse('https://registry.npmmirror.com'))
+          .timeout(const Duration(seconds: 5));
+      final code = response.statusCode;
+      if (code == 200 || code == 301 || code == 302 || code == 304) {
         findings.add(
           DiagnosticFinding(
             id: 'network_npm_ok',
@@ -267,10 +323,84 @@ class DiagnosticService {
       findings.add(
         DiagnosticFinding(
           id: 'network_npm_failed',
-          level: 'info',
-          title: '网络检测跳过',
-          summary: 'curl 不可用，跳过网络检测',
+          level: 'warn',
+          title: 'npm 镜像不可访问',
+          summary: '连接失败: $e',
+          actions: [
+            const DiagnosticAction(id: 'check_mirror', label: '检查镜像源'),
+          ],
+        ),
+      );
+    }
+
+    return findings;
+  }
+
+  /// Check API endpoint connectivity (China deployment)
+  static Future<List<DiagnosticFinding>> _checkApiEndpoints() async {
+    final findings = <DiagnosticFinding>[];
+
+    const endpoints = {
+      'Anthropic': 'https://api.anthropic.com',
+      'OpenAI': 'https://api.openai.com',
+      'Google AI': 'https://generativelanguage.googleapis.com',
+    };
+
+    int reachable = 0;
+    int unreachable = 0;
+
+    for (final entry in endpoints.entries) {
+      try {
+        final response = await http
+            .get(Uri.parse(entry.value))
+            .timeout(const Duration(seconds: 5));
+        final code = response.statusCode;
+        final ok = code == 200 || code == 301 || code == 302
+            || code == 304 || code == 403 || code == 401;
+        if (ok) {
+          reachable++;
+        } else {
+          unreachable++;
+        }
+      } catch (_) {
+        unreachable++;
+      }
+    }
+
+    if (unreachable == 0) {
+      findings.add(
+        DiagnosticFinding(
+          id: 'api_endpoints_ok',
+          level: 'ok',
+          title: 'API 端点可访问',
+          summary: '所有 $reachable 个 API 端点连接正常',
           actions: [],
+        ),
+      );
+    } else if (unreachable == endpoints.length) {
+      findings.add(
+        DiagnosticFinding(
+          id: 'api_endpoints_blocked',
+          level: 'warn',
+          title: 'API 端点不可访问',
+          summary: '所有 API 端点均无法连接，建议配置代理',
+          detail: '国内网络可能无法直接访问 Anthropic/OpenAI/Google API，请在设置中配置代理',
+          actions: [
+            const DiagnosticAction(id: 'goto_proxy', label: '配置代理'),
+          ],
+        ),
+      );
+    } else {
+      findings.add(
+        DiagnosticFinding(
+          id: 'api_endpoints_partial',
+          level: 'info',
+          title: '部分 API 端点不可访问',
+          summary: '$reachable 个可访问，$unreachable 个不可访问',
+          detail: '部分 API 端点无法连接，可能需要配置代理',
+          actions: [
+            const DiagnosticAction(id: 'goto_proxy', label: '配置代理'),
+          ],
         ),
       );
     }

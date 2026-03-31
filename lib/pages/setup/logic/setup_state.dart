@@ -16,6 +16,7 @@ class SetupStateData {
   final int currentStep;
   final bool nodeInstalled;
   final bool openclawInstalled;
+  final bool claudeCodeInstalled;
   final bool detecting;
   final bool installing;
   final bool bundledAvailable;
@@ -23,6 +24,7 @@ class SetupStateData {
   final List<String> logLines;
   final String nodeVersion;
   final String clawVersion;
+  final String claudeCodeVersion;
   final String bundledNodeVersion;
   final String bundledOpenClawVersion;
 
@@ -30,6 +32,7 @@ class SetupStateData {
     required this.currentStep,
     required this.nodeInstalled,
     required this.openclawInstalled,
+    required this.claudeCodeInstalled,
     required this.detecting,
     required this.installing,
     required this.bundledAvailable,
@@ -37,6 +40,7 @@ class SetupStateData {
     required this.logLines,
     required this.nodeVersion,
     required this.clawVersion,
+    required this.claudeCodeVersion,
     required this.bundledNodeVersion,
     required this.bundledOpenClawVersion,
   });
@@ -45,6 +49,7 @@ class SetupStateData {
         currentStep: 0,
         nodeInstalled: false,
         openclawInstalled: false,
+        claudeCodeInstalled: false,
         detecting: true,
         installing: false,
         bundledAvailable: false,
@@ -52,6 +57,7 @@ class SetupStateData {
         logLines: [],
         nodeVersion: '',
         clawVersion: '',
+        claudeCodeVersion: '',
         bundledNodeVersion: '',
         bundledOpenClawVersion: '',
       );
@@ -60,6 +66,7 @@ class SetupStateData {
     int? currentStep,
     bool? nodeInstalled,
     bool? openclawInstalled,
+    bool? claudeCodeInstalled,
     bool? detecting,
     bool? installing,
     bool? bundledAvailable,
@@ -67,6 +74,7 @@ class SetupStateData {
     List<String>? logLines,
     String? nodeVersion,
     String? clawVersion,
+    String? claudeCodeVersion,
     String? bundledNodeVersion,
     String? bundledOpenClawVersion,
   }) {
@@ -74,6 +82,7 @@ class SetupStateData {
       currentStep: currentStep ?? this.currentStep,
       nodeInstalled: nodeInstalled ?? this.nodeInstalled,
       openclawInstalled: openclawInstalled ?? this.openclawInstalled,
+      claudeCodeInstalled: claudeCodeInstalled ?? this.claudeCodeInstalled,
       detecting: detecting ?? this.detecting,
       installing: installing ?? this.installing,
       bundledAvailable: bundledAvailable ?? this.bundledAvailable,
@@ -81,15 +90,21 @@ class SetupStateData {
       logLines: logLines ?? this.logLines,
       nodeVersion: nodeVersion ?? this.nodeVersion,
       clawVersion: clawVersion ?? this.clawVersion,
+      claudeCodeVersion: claudeCodeVersion ?? this.claudeCodeVersion,
       bundledNodeVersion: bundledNodeVersion ?? this.bundledNodeVersion,
       bundledOpenClawVersion:
           bundledOpenClawVersion ?? this.bundledOpenClawVersion,
     );
   }
 
-  /// Get the adjusted step index accounting for bundled installation
+  /// Step indices:
+  /// 0 = Environment detection
+  /// 1 = Network config (only if !bundledAvailable)
+  /// nodeStepIndex = Node.js
+  /// toolsStepIndex = Tools (OpenClaw + Claude Code, parallel optional)
+  /// completeStepIndex = Complete
   int get nodeStepIndex => bundledAvailable ? 1 : 2;
-  int get openclawStepIndex => bundledAvailable ? 2 : 3;
+  int get toolsStepIndex => bundledAvailable ? 2 : 3;
   int get completeStepIndex => bundledAvailable ? 3 : 4;
   int get totalSteps => bundledAvailable ? 4 : 5;
 
@@ -105,12 +120,16 @@ class SetupStateData {
     }
     // Node.js step
     if (currentStep >= nodeStepIndex || nodeInstalled) progress += stepValue;
-    // OpenClaw step
-    if (currentStep >= openclawStepIndex || openclawInstalled) {
+    // Tools step (OpenClaw + Claude Code parallel)
+    if (currentStep >= toolsStepIndex ||
+        openclawInstalled ||
+        claudeCodeInstalled) {
       progress += stepValue;
     }
     // Complete step
-    if (nodeInstalled && openclawInstalled) progress += stepValue;
+    if (nodeInstalled && (openclawInstalled || claudeCodeInstalled)) {
+      progress += stepValue;
+    }
     return progress.clamp(0.0, 1.0);
   }
 
@@ -137,18 +156,20 @@ class SetupStateData {
       return StepStatus.notStarted;
     }
 
-    // OpenClaw step
-    if (step == openclawStepIndex) {
-      if (currentStep < openclawStepIndex) return StepStatus.notStarted;
-      if (openclawInstalled) return StepStatus.completed;
-      if (currentStep == openclawStepIndex) return StepStatus.inProgress;
+    // Tools step (OpenClaw + Claude Code parallel)
+    if (step == toolsStepIndex) {
+      if (currentStep < toolsStepIndex) return StepStatus.notStarted;
+      if (openclawInstalled || claudeCodeInstalled) {
+        return StepStatus.completed;
+      }
+      if (currentStep == toolsStepIndex) return StepStatus.inProgress;
       return StepStatus.notStarted;
     }
 
     // Complete step
     if (step == completeStepIndex) {
       if (currentStep < completeStepIndex) return StepStatus.notStarted;
-      final allDone = nodeInstalled && openclawInstalled;
+      final allDone = nodeInstalled && (openclawInstalled || claudeCodeInstalled);
       return allDone ? StepStatus.completed : StepStatus.inProgress;
     }
 
@@ -170,17 +191,21 @@ class SetupState extends _$SetupState {
 
     final nodeResult = await InstallerService.checkNode();
     final clawResult = await InstallerService.checkOpenClaw();
+    final ccResult = await InstallerService.checkClaudeCode();
     final bundledAvailable = await InstallerService.isBundledAvailable();
     final bundledVersions = await InstallerService.getBundledVersions();
 
     state = state.copyWith(
       nodeInstalled: nodeResult.exitCode == 0,
       openclawInstalled: clawResult.exitCode == 0,
+      claudeCodeInstalled: ccResult.exitCode == 0,
       nodeVersion:
           nodeResult.exitCode == 0 ? (nodeResult.stdout as String).trim() : '',
       clawVersion: clawResult.exitCode == 0
           ? (clawResult.stdout as String).trim()
           : '',
+      claudeCodeVersion:
+          ccResult.exitCode == 0 ? (ccResult.stdout as String).trim() : '',
       bundledAvailable: bundledAvailable,
       bundledNodeVersion: bundledVersions?['node'] ?? '',
       bundledOpenClawVersion: bundledVersions?['openclaw'] ?? '',

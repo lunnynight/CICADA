@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">CICADA uses this service to automatically configure Termux for you. It can type commands into Termux terminal so you don\'t have to do it manually.</string>
+</resources>

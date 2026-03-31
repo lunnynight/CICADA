@@ -1,53 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../app/theme/cicada_colors.dart';
+import '../models/skill.dart';
 import '../services/bundled_skill_service.dart';
 import '../services/installer_service.dart';
-
-class SkillModel {
-  final String name;
-  final String description;
-  final String author;
-  final int downloads;
-  final bool isBundled;
-
-  const SkillModel({
-    required this.name,
-    required this.description,
-    required this.author,
-    required this.downloads,
-    this.isBundled = false,
-  });
-
-  factory SkillModel.fromJson(Map<String, dynamic> json) {
-    return SkillModel(
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      author: json['author'] as String? ?? 'unknown',
-      downloads: json['downloads'] as int? ?? 0,
-    );
-  }
-
-  factory SkillModel.fromBundled(BundledSkillMeta meta) {
-    return SkillModel(
-      name: meta.name,
-      description: meta.description,
-      author: meta.author,
-      downloads: 0,
-      isBundled: true,
-    );
-  }
-
-  SkillModel copyWith({bool? isBundled}) => SkillModel(
-    name: name,
-    description: description,
-    author: author,
-    downloads: downloads,
-    isBundled: isBundled ?? this.isBundled,
-  );
-}
+import '../services/skill_discovery_service.dart';
+import '../services/skill_installer_service.dart';
+import 'clawhub_page.dart';
 
 class SkillsPage extends StatefulWidget {
   const SkillsPage({super.key});
@@ -56,11 +15,69 @@ class SkillsPage extends StatefulWidget {
   State<SkillsPage> createState() => _SkillsPageState();
 }
 
-class _SkillsPageState extends State<SkillsPage> {
-  List<SkillModel> _allSkills = [];
-  List<SkillModel> _filtered = [];
-  Set<String> _installed = {};
-  Set<String> _bundledNames = {};
+class _SkillsPageState extends State<SkillsPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Tab bar
+        Container(
+          color: CicadaColors.surface,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: CicadaColors.accent,
+            labelColor: CicadaColors.accent,
+            unselectedLabelColor: CicadaColors.textSecondary,
+            labelStyle: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+            ),
+            tabs: const [
+              Tab(text: 'BUNDLED'),
+              Tab(text: 'CLAWHUB STORE'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: const [
+              _BundledSkillsTab(),
+              ClawHubPage(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BundledSkillsTab extends StatefulWidget {
+  const _BundledSkillsTab();
+
+  @override
+  State<_BundledSkillsTab> createState() => _BundledSkillsTabState();
+}
+
+class _BundledSkillsTabState extends State<_BundledSkillsTab> {
+  List<Skill> _allSkills = [];
+  List<Skill> _filtered = [];
   final Set<String> _installing = {};
   bool _loading = true;
   bool _syncing = false;
@@ -68,7 +85,7 @@ class _SkillsPageState extends State<SkillsPage> {
   String _categoryFilter = '全部';
   OpenClawStatus _openclawStatus = OpenClawStatus.notInstalled;
 
-  static const _categories = ['全部', '内置', '已安装', '代码质量', '文档', '测试'];
+  static const _categories = ['全部', '内置', '已安装', '通讯', '开发', '效率', '笔记', '智能家居', '媒体', 'AI', '系统'];
 
   @override
   void initState() {
@@ -79,7 +96,6 @@ class _SkillsPageState extends State<SkillsPage> {
   Future<void> _loadData() async {
     await Future.wait([
       _fetchSkills(),
-      _loadInstalled(),
       _checkOpenClawStatus(),
     ]);
   }
@@ -90,74 +106,18 @@ class _SkillsPageState extends State<SkillsPage> {
   }
 
   Future<void> _fetchSkills() async {
-    // Layer 1: load bundled manifest first (offline-first)
-    final bundled = await BundledSkillService.loadManifest();
-    final bundledMap = {
-      for (final m in bundled) m.name: SkillModel.fromBundled(m),
-    };
-    _bundledNames = bundledMap.keys.toSet();
-
-    // Load bundled skills only (local mode)
-    List<SkillModel> remote = [];
-
-    // Merge: remote skills annotated with bundled flag; bundled-only skills appended
-    final merged = <String, SkillModel>{};
-    for (final s in remote) {
-      merged[s.name] = s.copyWith(isBundled: _bundledNames.contains(s.name));
-    }
-    for (final entry in bundledMap.entries) {
-      merged.putIfAbsent(entry.key, () => entry.value);
-    }
-
-    // If both remote and bundled are empty, use static fallback with bundled flags
-    final result =
-        merged.isEmpty ? _buildFallback(bundledMap) : merged.values.toList();
-
+    final skills = await SkillDiscoveryService.discoverAll();
     if (mounted) {
       setState(() {
-        _allSkills = result;
+        _allSkills = skills;
         _applyFilter();
         _loading = false;
       });
     }
   }
 
-  List<SkillModel> _buildFallback(Map<String, SkillModel> bundledMap) {
-    const fallback = [
-      ('code-review', '自动化代码质量检查与审查建议', 'CICADA', 0),
-      ('doc-gen', '从代码自动生成 API 文档', 'CICADA', 0),
-      ('test-helper', '自动生成单元测试用例', 'CICADA', 0),
-      ('i18n', '多语言国际化翻译支持', 'CICADA', 0),
-      ('git-helper', '智能 commit message 生成', 'CICADA', 0),
-      ('refactor', '代码重构与优化建议', 'CICADA', 0),
-    ];
-    return fallback
-        .map(
-          (r) => SkillModel(
-            name: r.$1,
-            description: r.$2,
-            author: r.$3,
-            downloads: r.$4,
-            isBundled: _bundledNames.contains(r.$1),
-          ),
-        )
-        .toList();
-  }
-
-  Future<void> _loadInstalled() async {
-    // Load installed skills from bundled skills directory
-    final bundled = await BundledSkillService.loadManifest();
-    final installedSet = <String>{};
-    for (final meta in bundled) {
-      if (await BundledSkillService.isInstalled(meta.name)) {
-        installedSet.add(meta.name);
-      }
-    }
-    if (mounted) setState(() => _installed = installedSet);
-  }
-
   void _applyFilter() {
-    List<SkillModel> base;
+    List<Skill> base;
     if (_search.isEmpty) {
       base = List.of(_allSkills);
     } else {
@@ -167,6 +127,7 @@ class _SkillsPageState extends State<SkillsPage> {
               .where(
                 (s) =>
                     s.name.toLowerCase().contains(q) ||
+                    s.slug.toLowerCase().contains(q) ||
                     s.description.toLowerCase().contains(q) ||
                     s.author.toLowerCase().contains(q),
               )
@@ -179,15 +140,15 @@ class _SkillsPageState extends State<SkillsPage> {
         base = base.where((s) => s.isBundled).toList();
         break;
       case '已安装':
-        base = base.where((s) => _installed.contains(s.name)).toList();
+        base = base.where((s) => s.isInstalled).toList();
         break;
       case '代码质量':
         base =
             base
                 .where(
                   (s) =>
-                      s.name.contains('review') ||
-                      s.name.contains('refactor') ||
+                      s.slug.contains('review') ||
+                      s.slug.contains('refactor') ||
                       s.description.contains('质量') ||
                       s.description.contains('重构'),
                 )
@@ -198,8 +159,8 @@ class _SkillsPageState extends State<SkillsPage> {
             base
                 .where(
                   (s) =>
-                      s.name.contains('doc') ||
-                      s.name.contains('i18n') ||
+                      s.slug.contains('doc') ||
+                      s.slug.contains('i18n') ||
                       s.description.contains('文档') ||
                       s.description.contains('翻译'),
                 )
@@ -210,7 +171,7 @@ class _SkillsPageState extends State<SkillsPage> {
             base
                 .where(
                   (s) =>
-                      s.name.contains('test') || s.description.contains('测试'),
+                      s.slug.contains('test') || s.description.contains('测试'),
                 )
                 .toList();
         break;
@@ -238,39 +199,34 @@ class _SkillsPageState extends State<SkillsPage> {
     }
   }
 
-  Future<void> _install(SkillModel skill) async {
-    setState(() => _installing.add(skill.name));
+  Future<void> _install(Skill skill) async {
+    setState(() => _installing.add(skill.slug));
     try {
       if (skill.isBundled) {
-        // Use bundled fast path
         final manifest = await BundledSkillService.loadManifest();
-        final meta = manifest.firstWhere((m) => m.name == skill.name);
+        final meta = manifest.firstWhere((m) => m.name == skill.slug);
         await BundledSkillService.installBundled(meta);
+      } else {
+        await SkillInstallerService.installFromClawHub(skill.slug);
       }
-      // Note: Non-bundled skills not supported in local mode
-      await _loadInstalled();
+      await _fetchSkills();
     } catch (_) {}
-    if (mounted) setState(() => _installing.remove(skill.name));
+    if (mounted) setState(() => _installing.remove(skill.slug));
   }
 
-  Future<void> _uninstall(SkillModel skill) async {
-    setState(() => _installing.add(skill.name));
+  Future<void> _uninstall(Skill skill) async {
+    setState(() => _installing.add(skill.slug));
     try {
-      // Uninstall bundled skill by removing from OpenClaw skills directory
-      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      final skillDir = Directory('$home/.openclaw/skills/${skill.name}');
-      if (await skillDir.exists()) {
-        await skillDir.delete(recursive: true);
-      }
-      await _loadInstalled();
+      await SkillInstallerService.uninstall(skill.slug);
+      await _fetchSkills();
     } catch (_) {}
-    if (mounted) setState(() => _installing.remove(skill.name));
+    if (mounted) setState(() => _installing.remove(skill.slug));
   }
 
   Future<void> _syncBundled() async {
     setState(() => _syncing = true);
     final count = await BundledSkillService.syncBundledSkills();
-    await _loadInstalled();
+    await _fetchSkills();
     if (mounted) {
       setState(() => _syncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -581,12 +537,10 @@ class _SkillsPageState extends State<SkillsPage> {
                     itemCount: _filtered.length,
                     itemBuilder: (context, i) {
                       final skill = _filtered[i];
-                      final isInstalled = _installed.contains(skill.name);
-                      final isInstalling = _installing.contains(skill.name);
                       return _SkillCard(
                         skill: skill,
-                        isInstalled: isInstalled,
-                        isInstalling: isInstalling,
+                        isInstalled: skill.isInstalled,
+                        isInstalling: _installing.contains(skill.slug),
                         openclawRunning: _openclawStatus == OpenClawStatus.running,
                         onInstall: () => _install(skill),
                         onUninstall: () => _uninstall(skill),
@@ -661,7 +615,7 @@ class _CornerBracketsPainter extends CustomPainter {
 }
 
 class _SkillCard extends StatelessWidget {
-  final SkillModel skill;
+  final Skill skill;
   final bool isInstalled;
   final bool isInstalling;
   final bool openclawRunning;
