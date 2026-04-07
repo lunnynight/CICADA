@@ -72,34 +72,34 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
-| TEST-07 | — | Pending |
-| TEST-08 | — | Pending |
-| TEST-09 | — | Pending |
-| WDGT-01 | — | Pending |
-| WDGT-02 | — | Pending |
-| WDGT-03 | — | Pending |
-| WDGT-04 | — | Pending |
-| WDGT-05 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| COV-01 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| SPLIT-01 | — | Pending |
-| SPLIT-02 | — | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Pending |
+| TEST-05 | Phase 1 | Pending |
+| TEST-06 | Phase 1 | Pending |
+| TEST-07 | Phase 1 | Pending |
+| TEST-08 | Phase 1 | Pending |
+| TEST-09 | Phase 1 | Pending |
+| WDGT-01 | Phase 2 | Pending |
+| WDGT-02 | Phase 2 | Pending |
+| WDGT-03 | Phase 2 | Pending |
+| WDGT-04 | Phase 2 | Pending |
+| WDGT-05 | Phase 2 | Pending |
+| INTG-01 | Phase 2 | Pending |
+| INTG-02 | Phase 2 | Pending |
+| COV-01 | Phase 3 | Pending |
+| NAV-01 | Phase 3 | Pending |
+| NAV-02 | Phase 3 | Pending |
+| NAV-03 | Phase 3 | Pending |
+| SPLIT-01 | Phase 3 | Pending |
+| SPLIT-02 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-08 after initial definition*
+*Last updated: 2026-04-08 after roadmap creation*
