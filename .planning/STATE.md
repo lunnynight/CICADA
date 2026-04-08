@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-08T02:06:34.428Z"
+last_updated: "2026-04-08T03:00:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 02-03-PLAN.md (Patrol integration test framework + smoke tests)
+**Session:** Completed 02-02-PLAN.md (SetupPage + HomePage widget tests)
 
 ## Project Reference
 
@@ -26,13 +26,13 @@ progress:
 ## Current Position
 
 Phase: 02 (widget) — EXECUTING
-Plan: 3 of 3
+Plan: 2 of 3 complete (02-02 done)
 **Phase:** 2
-**Plan:** 3 complete
+**Plan:** 2 complete
 **Status:** Executing Phase 02
 
 ```
-Progress: [████████  ] 83%
+Progress: [██████████] 100%
 Phase 1 [██████████] → Phase 2 [██████████] → Phase 3 [          ]
 ```
 
@@ -49,6 +49,8 @@ Phase 1 [██████████] → Phase 2 [████████�
 | Phase 01 P03 | 4min | 3 tasks | 4 files |
 | Phase 02 P01 | 8min | 2 tasks | 5 files |
 
+| Phase 02 P02 | 35min | 2 tasks | 2 files |
+
 ## Accumulated Context
 
 ### Key Decisions
@@ -62,7 +64,10 @@ Phase 1 [██████████] → Phase 2 [████████�
 - FakeSetupState extends SetupState，override build() 返回固定数据 — 避免触发 detectEnvironment() 副作用
 - QuickActionButton 测试必须用 Row 包裹，因为 widget 内部使用 Expanded
 - SetupStateData.initial() 默认 detecting:true，需要非检测状态的测试必须显式 copyWith(detecting:false)
-- 集成测试用 testWidgets 而非 patrolTest — flutter_test runner CI 友好（D-05），patrolTest 需要设备/模拟器
+- tester.runAsync 必须用于 SetupPage 测试 — fake async pump 不执行真实 Process.run I/O
+- 测试断言需与宿主机无关 — 不假设 Node.js/OpenClaw 未安装，检查已安装或未安装均可
+- 预存在的 RenderFlex overflow (home_page.dart:291) 通过 FlutterError.onError 抑制，不修复
+- Strategy A 适用于 SetupPage：InstallerService 静态方法内部有 try/catch，返回安全默认值
 - testWidgets skip 参数类型为 bool? 而非 String — 跳过原因放注释中
 - assets/bundled/nodejs/ 目录需要存在 — pubspec.yaml 声明了该目录，缺失会导致 Windows 构建失败
 
