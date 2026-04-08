@@ -14,6 +14,13 @@ import '../core/result.dart';
 class ConfigRepository {
   static String? _cachedConfigDir;
 
+  /// Override config directory for testing only.
+  /// Pass null to reset to default resolution.
+  // ignore: invalid_use_of_visible_for_testing_member
+  static void overrideConfigDirForTest(String? path) {
+    _cachedConfigDir = path;
+  }
+
   static String get _homePath =>
       Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
 
