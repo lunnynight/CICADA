@@ -27,8 +27,8 @@
 
 ### 集成测试
 
-- [ ] **INTG-01**: Patrol 集成测试框架配置完成并可运行
-- [ ] **INTG-02**: 完整安装流程端到端测试
+- [x] **INTG-01**: Patrol 集成测试框架配置完成并可运行
+- [x] **INTG-02**: 完整安装流程端到端测试
 
 ### 覆盖率
 
@@ -86,8 +86,8 @@
 | WDGT-03 | Phase 2 | Pending |
 | WDGT-04 | Phase 2 | Complete |
 | WDGT-05 | Phase 2 | Pending |
-| INTG-01 | Phase 2 | Pending |
-| INTG-02 | Phase 2 | Pending |
+| INTG-01 | Phase 2 | Complete |
+| INTG-02 | Phase 2 | Complete |
 | COV-01 | Phase 3 | Pending |
 | NAV-01 | Phase 3 | Pending |
 | NAV-02 | Phase 3 | Pending |

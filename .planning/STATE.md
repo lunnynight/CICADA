@@ -8,14 +8,14 @@ progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_plans: 5
+  percent: 83
 ---
 
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 02-01-PLAN.md (widget tests: StatCard, AttentionPanel, QuickActionButton, EnvironmentDetector, InstallationPanel)
+**Session:** Completed 02-03-PLAN.md (Patrol integration test framework + smoke tests)
 
 ## Project Reference
 
@@ -26,14 +26,14 @@ progress:
 ## Current Position
 
 Phase: 02 (widget) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 **Phase:** 2
-**Plan:** 1 complete, starting plan 2
+**Plan:** 3 complete
 **Status:** Executing Phase 02
 
 ```
-Progress: [███████   ] 67%
-Phase 1 [██████████] → Phase 2 [███       ] → Phase 3 [          ]
+Progress: [████████  ] 83%
+Phase 1 [██████████] → Phase 2 [██████████] → Phase 3 [          ]
 ```
 
 ## Performance Metrics
@@ -62,6 +62,9 @@ Phase 1 [██████████] → Phase 2 [███       ] → Phas
 - FakeSetupState extends SetupState，override build() 返回固定数据 — 避免触发 detectEnvironment() 副作用
 - QuickActionButton 测试必须用 Row 包裹，因为 widget 内部使用 Expanded
 - SetupStateData.initial() 默认 detecting:true，需要非检测状态的测试必须显式 copyWith(detecting:false)
+- 集成测试用 testWidgets 而非 patrolTest — flutter_test runner CI 友好（D-05），patrolTest 需要设备/模拟器
+- testWidgets skip 参数类型为 bool? 而非 String — 跳过原因放注释中
+- assets/bundled/nodejs/ 目录需要存在 — pubspec.yaml 声明了该目录，缺失会导致 Windows 构建失败
 
 ### Known Constraints
 
@@ -79,7 +82,7 @@ None
 
 ## Session Continuity
 
-**To resume:** Phase 02 Plan 01 complete. Continue with Phase 02 Plan 02.
+**To resume:** Phase 02 all 3 plans complete. Transition to Phase 03.
 
 ---
 *State initialized: 2026-04-08*
