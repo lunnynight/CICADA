@@ -8,7 +8,7 @@
 
 - [x] **Phase 1: 服务层单元测试** - 为所有服务层公开方法建立单元测试覆盖
 - [x] **Phase 2: Widget 与集成测试** - 完成组件测试和 Patrol 集成测试框架
-- [ ] **Phase 3: 收尾与达标** - 修复导航 TODO、拆分大文件、达成 80% 覆盖率目标
+- [x] **Phase 3: 收尾与达标** - 修复导航 TODO、拆分大文件、达成 80% 覆盖率目标 (completed 2026-04-08)
 
 ## Phase Details
 
@@ -60,8 +60,8 @@ Plans:
 - [x] 03-01-PLAN.md — Navigation audit + widget tests for DiagnosticPage (Wave 1)
 - [x] 03-02-PLAN.md — File splits: settings_page.dart + skills_page.dart (Wave 1)
 - [x] 03-03-PLAN.md — Coverage sprint: models + core unit tests (Wave 1)
-- [ ] 03-04-PLAN.md — Coverage sprint: data + remaining services tests (Wave 2)
-- [ ] 03-05-PLAN.md — Coverage measurement + gap fill to reach 80% (Wave 3)
+- [x] 03-04-PLAN.md — Coverage sprint: data + remaining services tests (Wave 2)
+- [x] 03-05-PLAN.md — Coverage measurement + gap fill to reach 80% (Wave 3)
 
 ## Progress Table
 
@@ -69,7 +69,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. 服务层单元测试 | 3/3 | Complete | 2026-04-08 |
 | 2. Widget 与集成测试 | 3/3 | Complete | 2026-04-08 |
-| 3. 收尾与达标 | 3/5 | In Progress|  |
+| 3. 收尾与达标 | 5/5 | Complete   | 2026-04-08 |
 
 ---
 *Roadmap created: 2026-04-08*
