@@ -15,7 +15,7 @@ progress:
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 03-02-PLAN.md (settings_page + skills_page file splits)
+**Session:** Completed 03-04-PLAN.md (data layer + remaining service tests)
 
 ## Project Reference
 
@@ -28,7 +28,7 @@ progress:
 Phase: 03 (wrap-up) — EXECUTING
 Plan: 4 of 5
 **Phase:** 3
-**Plan:** 03-03 complete
+**Plan:** 03-04 complete
 **Status:** Executing Phase 03
 
 ```
@@ -41,7 +41,7 @@ Phase 1 [██████████] → Phase 2 [████████�
 | Metric | Baseline | Current | Target |
 |--------|----------|---------|--------|
 | Test coverage | 10.6% | 10.6% | 80% |
-| Passing tests | 15 | 112 | TBD |
+| Passing tests | 15 | 407 | TBD |
 | Files > 800 lines | 2 | 0 | 0 |
 | Nav TODOs | 3 | 3 | 0 |
 | Phase 01 P01 | 6min | 3 tasks | 6 files |
@@ -53,6 +53,8 @@ Phase 1 [██████████] → Phase 2 [████████�
 | Phase 03 P03 | 8min | 2 tasks | 10 files |
 
 | Phase 03 P02 | 25min | 2 tasks | 6 files |
+
+| Phase 03 P04 | 15min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -79,6 +81,9 @@ Phase 1 [██████████] → Phase 2 [████████�
 - settings_integration_section.dart 额外提取 — 提取 dialogs+proxy 后 settings_page 仍 937 行，需继续提取 Feishu 集成段才能达到 <800 行
 - SettingsIntegrationSection 为 StatefulWidget — 自持 TextEditingControllers 和本地 UI 状态（_showFeishuConfig, _testingFeishu）
 - Painters 改为 public（去掉 _ 前缀）— 移入 skill_card.dart 后 private 前缀会导致文件作用域限制
+- ConfigRepository/BundledSkillService/ClaudeCodeService 测试隔离通过 overrideXxxForTest 静态钩子实现 — 最小侵入，不改变生产路径
+- flutter test 环境中 rootBundle 资产可用 — pubspec.yaml 声明的资产在单元测试中可加载，断言需反映真实行为
+- ClaudeCodeService.listSessions 在 Windows 上使用 split('/') 导致路径解析错误 — 已修复为 Platform.pathSeparator
 
 ### Known Constraints
 
