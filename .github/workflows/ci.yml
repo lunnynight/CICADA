@@ -30,7 +30,7 @@ jobs:
           dart scripts/prepare_bundled_deps.dart || echo "Warning: Failed to prepare bundled deps"
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test

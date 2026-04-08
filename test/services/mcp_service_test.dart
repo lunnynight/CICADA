@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/services/mcp_service.dart';
 import '../../lib/models/mcp_server.dart';
-import '../../lib/core/result.dart';
 
 McpServer _makeServer(String id, {bool enabled = true, String? description, String? source}) => McpServer(
       id: id,

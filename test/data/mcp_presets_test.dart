@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../lib/data/mcp_presets.dart';
-import '../../lib/models/mcp_server.dart';
 
 void main() {
   group('mcpPresets', () {

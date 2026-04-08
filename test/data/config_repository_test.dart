@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../lib/data/config_repository.dart';
-import '../../lib/core/result.dart';
 
 void main() {
   group('ConfigRepository', () {
