@@ -21,7 +21,12 @@
   2. DiagnosticService、TokenService、IntegrationService、GatewayService、InstallerService、ConfigService、SkillDiscoveryService、SkillInstallerService、UpdateService、McpService、ProxyService 每个服务至少有一个测试文件
   3. static 方法的 mock 策略已确立并在测试中一致使用（包装类或依赖注入）
   4. 所有新增测试在 CI 中可重复运行（不依赖外部 CLI 工具的真实调用）
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 01-01-PLAN.md — Mock infrastructure + TokenService pure tests + ConfigService CRUD tests (Wave 1)
+- [ ] 01-02-PLAN.md — McpService, ProxyService, InstallerService, DiagnosticService tests (Wave 2)
+- [ ] 01-03-PLAN.md — SkillInstallerService, SkillDiscoveryService, UpdateService, GatewayService tests (Wave 2)
 
 ### Phase 2: Widget 与集成测试
 **Goal**: 核心 UI 组件有 widget 测试，Patrol 集成测试框架可运行完整安装流程
@@ -51,7 +56,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 服务层单元测试 | 0/0 | Not started | - |
+| 1. 服务层单元测试 | 1/3 | In Progress|  |
 | 2. Widget 与集成测试 | 0/0 | Not started | - |
 | 3. 收尾与达标 | 0/0 | Not started | - |
 
