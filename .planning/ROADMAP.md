@@ -37,8 +37,12 @@ Plans:
   2. `flutter test integration_test/` 可执行，Patrol 框架配置完成无报错
   3. 完整安装流程端到端测试可运行并通过（或在无环境时优雅跳过）
   4. HomePage 导航切换测试验证各 tab 正确渲染
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Dashboard widgets (StatCard, AttentionPanel, QuickActionButton) + Setup sub-widgets (EnvironmentDetector, InstallationPanel) tests (Wave 1)
+- [ ] 02-02-PLAN.md — SetupPage full page render + HomePage navigation switching tests (Wave 1)
+- [ ] 02-03-PLAN.md — Patrol integration test framework setup + smoke test (Wave 1)
 
 ### Phase 3: 收尾与达标
 **Goal**: 导航 TODO 全部实现，大文件拆分完成，整体覆盖率达到 80%
@@ -57,7 +61,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 服务层单元测试 | 3/3 | Complete | 2026-04-08 |
-| 2. Widget 与集成测试 | 0/0 | Not started | - |
+| 2. Widget 与集成测试 | 0/3 | Planning | - |
 | 3. 收尾与达标 | 0/0 | Not started | - |
 
 ---
