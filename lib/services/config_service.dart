@@ -17,9 +17,12 @@ class ConfigService {
   static String get configPath => ConfigRepository.configPath;
 
   /// Read config. Returns empty map on any failure (backward compatible).
+  /// Always returns a mutable copy so callers can modify it safely.
   static Future<Map<String, dynamic>> readConfig() async {
     final result = await _repo.readConfig();
-    return result.dataOrNull ?? {};
+    final data = result.dataOrNull;
+    if (data == null) return <String, dynamic>{};
+    return Map<String, dynamic>.from(data);
   }
 
   /// Write config with atomic write + file permissions.
