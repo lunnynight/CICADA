@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import '../app/theme/cicada_colors.dart';
@@ -8,7 +9,11 @@ import '../services/diagnostic_service.dart';
 class DiagnosticPage extends StatefulWidget {
   final void Function(int index)? onNavigate;
 
-  const DiagnosticPage({super.key, this.onNavigate});
+  /// For testing only: inject a pre-built report to skip real I/O.
+  @visibleForTesting
+  final DiagnosticReport? diagnosticsOverride;
+
+  const DiagnosticPage({super.key, this.onNavigate, this.diagnosticsOverride});
 
   @override
   State<DiagnosticPage> createState() => _DiagnosticPageState();
@@ -26,7 +31,7 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
 
   Future<void> _runDiagnostics() async {
     setState(() => _running = true);
-    final report = await DiagnosticService.runDiagnostics();
+    final report = widget.diagnosticsOverride ?? await DiagnosticService.runDiagnostics();
     if (!mounted) return;
     setState(() {
       _report = report;
