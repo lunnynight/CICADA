@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/pages/skills_page.dart';
 
 void main() {
   group('SkillsPage', () {
-    Widget buildPage() => const MaterialApp(home: Scaffold(body: SkillsPage()));
+    Widget buildPage() => const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SkillsPage())),
+        );
 
     Future<void> pumpAndWait(WidgetTester tester, Widget widget) async {
       await tester.runAsync(() async {

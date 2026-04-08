@@ -1,12 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import '../app/theme/cicada_colors.dart';
 import '../app/widgets/terminal_dialog.dart';
 import '../models/diagnostic.dart';
+import '../providers/page_data_provider.dart';
+import '../pages/home_page.dart' show NavIndex;
 import '../services/diagnostic_service.dart';
 
-class DiagnosticPage extends StatefulWidget {
+class DiagnosticPage extends ConsumerStatefulWidget {
   final void Function(int index)? onNavigate;
 
   /// For testing only: inject a pre-built report to skip real I/O.
@@ -16,33 +18,14 @@ class DiagnosticPage extends StatefulWidget {
   const DiagnosticPage({super.key, this.onNavigate, this.diagnosticsOverride});
 
   @override
-  State<DiagnosticPage> createState() => _DiagnosticPageState();
+  ConsumerState<DiagnosticPage> createState() => _DiagnosticPageState();
 }
 
-class _DiagnosticPageState extends State<DiagnosticPage> {
-  DiagnosticReport? _report;
-  bool _running = false;
+class _DiagnosticPageState extends ConsumerState<DiagnosticPage> {
 
-  @override
-  void initState() {
-    super.initState();
-    _runDiagnostics();
-  }
-
-  Future<void> _runDiagnostics() async {
-    setState(() => _running = true);
-    final report = widget.diagnosticsOverride ?? await DiagnosticService.runDiagnostics();
-    if (!mounted) return;
-    setState(() {
-      _report = report;
-      _running = false;
-    });
-  }
-
-  Future<void> _copyReport() async {
-    if (_report == null) return;
+  Future<void> _copyReport(DiagnosticReport report) async {
     try {
-      final reportText = DiagnosticService.exportReport(_report!);
+      final reportText = DiagnosticService.exportReport(report);
 
       // Use super_clipboard to copy to clipboard
       final clipboard = SystemClipboard.instance;
@@ -100,6 +83,10 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
 
   @override
   Widget build(BuildContext context) {
+    final reportAsync = widget.diagnosticsOverride != null
+        ? AsyncValue.data(widget.diagnosticsOverride!)
+        : ref.watch(diagnosticReportProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -119,9 +106,11 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
               ),
               const Spacer(),
               FilledButton.icon(
-                onPressed: _running ? null : _runDiagnostics,
+                onPressed: reportAsync.isLoading
+                    ? null
+                    : () => ref.invalidate(diagnosticReportProvider),
                 icon:
-                    _running
+                    reportAsync.isLoading
                         ? const SizedBox(
                           width: 16,
                           height: 16,
@@ -149,121 +138,123 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
           ),
           const SizedBox(height: 24),
 
-          // Overall status card
-          if (_report != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: CicadaColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _levelToColor(_report!.level),
-                  width: 1,
+          ...reportAsync.when(
+            loading: () => [
+              const Center(
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              child: Row(
-                children: [
-                  _buildLevelIcon(_report!.level),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _report!.title,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: _levelToColor(_report!.level),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _report!.summary,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: CicadaColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 16),
+              const Center(child: Text('正在执行三层诊断...')),
+            ],
+            error: (e, _) => [
+              Center(child: Text('诊断失败: $e',
+                  style: const TextStyle(color: CicadaColors.alert))),
+            ],
+            data: (report) => [
+              _buildReportCard(report),
+              const SizedBox(height: 24),
+              const Text(
+                '详细发现',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: CicadaColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: report.findings.length,
+                itemBuilder: (_, index) {
+                  final finding = report.findings[index];
+                  return _buildFindingCard(finding);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportCard(DiagnosticReport report) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CicadaColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _levelToColor(report.level),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildLevelIcon(report.level),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  report.title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: _levelToColor(report.level),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          final reportText = DiagnosticService.exportReport(
-                            _report!,
-                          );
-                          final lines = ValueNotifier<List<String>>(
-                            reportText.split('\n'),
-                          );
-                          final running = ValueNotifier<bool>(false);
-
-                          TerminalDialog.show(
-                            context,
-                            title: '诊断报告',
-                            lines: lines,
-                            running: running,
-                          );
-                        },
-                        icon: const Icon(Icons.text_snippet, size: 16),
-                        label: const Text('查看报告'),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: CicadaColors.border),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: _copyReport,
-                        icon: const Icon(Icons.copy, size: 16),
-                        label: const Text('复制报告'),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: CicadaColors.border),
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  report.summary,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: CicadaColors.textSecondary,
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  final reportText = DiagnosticService.exportReport(report);
+                  final lines = ValueNotifier<List<String>>(
+                    reportText.split('\n'),
+                  );
+                  final running = ValueNotifier<bool>(false);
+                  TerminalDialog.show(
+                    context,
+                    title: '诊断报告',
+                    lines: lines,
+                    running: running,
+                  );
+                },
+                icon: const Icon(Icons.text_snippet, size: 16),
+                label: const Text('查看报告'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: CicadaColors.border),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Findings list
-            const Text(
-              '详细发现',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: CicadaColors.textPrimary,
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _copyReport(report),
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('复制报告'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: CicadaColors.border),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _report!.findings.length,
-              itemBuilder: (_, index) {
-                final finding = _report!.findings[index];
-                return _buildFindingCard(finding);
-              },
-            ),
-          ],
-
-          // Loading state
-          if (_running) ...[
-            const Center(
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Center(child: Text('正在执行三层诊断...')),
-          ],
+            ],
+          ),
         ],
       ),
     );
@@ -382,16 +373,16 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
   void _handleAction(DiagnosticAction action) {
     switch (action.id) {
       case 'goto_setup':
-        widget.onNavigate?.call(1);
+        widget.onNavigate?.call(NavIndex.setup);
         break;
       case 'goto_models':
-        widget.onNavigate?.call(7);
+        widget.onNavigate?.call(NavIndex.models);
         break;
       case 'goto_dashboard':
-        widget.onNavigate?.call(0);
+        widget.onNavigate?.call(NavIndex.dashboard);
         break;
       case 'retry':
-        _runDiagnostics();
+        ref.invalidate(diagnosticReportProvider);
         break;
     }
   }

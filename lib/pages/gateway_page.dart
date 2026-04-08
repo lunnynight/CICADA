@@ -1,32 +1,30 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/theme/cicada_colors.dart';
 import '../app/widgets/hud_panel.dart';
+import '../providers/gateway_provider.dart';
 import '../services/gateway_service.dart';
 import '../services/installer_service.dart';
 import '../services/config_service.dart';
-import '../services/preset_service.dart';
+import 'gateway_sessions_tab.dart';
 
-class GatewayPage extends StatefulWidget {
+class GatewayPage extends ConsumerStatefulWidget {
   const GatewayPage({super.key});
 
   @override
-  State<GatewayPage> createState() => _GatewayPageState();
+  ConsumerState<GatewayPage> createState() => _GatewayPageState();
 }
 
-class _GatewayPageState extends State<GatewayPage>
+class _GatewayPageState extends ConsumerState<GatewayPage>
     with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
   // Gateway status
   bool _isRunning = false;
   bool _isChecking = true;
   bool _isStarting = false;
   bool _isRestarting = false;
-
-  // Logs
-  bool _showLogs = false;
-  final List<String> _logLines = [];
-  final ScrollController _logScrollController = ScrollController();
-  StreamSubscription? _logSub;
 
   // Chat
   final List<ChatMessage> _messages = [];
@@ -36,23 +34,18 @@ class _GatewayPageState extends State<GatewayPage>
   StreamSubscription? _messageSub;
   StreamSubscription? _statusSub;
 
-  // Models
-  List<Map<String, dynamic>> _providers = [];
-  String? _currentProvider;
-  bool _isLoadingProviders = true;
-
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _init();
   }
 
   @override
   void dispose() {
-    _logSub?.cancel();
+    _tabController.dispose();
     _messageSub?.cancel();
     _statusSub?.cancel();
-    _logScrollController.dispose();
     _messageScrollController.dispose();
     _messageController.dispose();
     super.dispose();
@@ -60,7 +53,6 @@ class _GatewayPageState extends State<GatewayPage>
 
   Future<void> _init() async {
     await _checkGatewayStatus();
-    await _loadProviders();
     if (_isRunning) {
       _connectWebSocket();
     }
@@ -74,36 +66,6 @@ class _GatewayPageState extends State<GatewayPage>
       setState(() => _isRunning = running);
     } finally {
       if (mounted) setState(() => _isChecking = false);
-    }
-  }
-
-  Future<void> _loadProviders() async {
-    setState(() => _isLoadingProviders = true);
-    try {
-      final cn = await PresetService.loadCnModels();
-      final intl = await PresetService.loadIntlModels();
-      final configured = await ConfigService.getConfiguredProviders();
-
-      final allProviders = <Map<String, dynamic>>[
-        ...((cn['providers'] as List?) ?? []),
-        ...((intl['providers'] as List?) ?? []),
-      ];
-
-      // Get current provider from openclaw config
-      final config = await ConfigService.readConfig();
-      final currentProviderId = config['defaultProvider'] as String?;
-
-      if (!mounted) return;
-      setState(() {
-        _providers = allProviders
-            .where((p) => configured.contains(p['id']))
-            .toList();
-        _currentProvider = currentProviderId;
-      });
-    } catch (e) {
-      debugPrint('Failed to load providers: $e');
-    } finally {
-      if (mounted) setState(() => _isLoadingProviders = false);
     }
   }
 
@@ -151,43 +113,24 @@ class _GatewayPageState extends State<GatewayPage>
   }
 
   Future<void> _startGateway() async {
-    setState(() {
-      _isStarting = true;
-      _showLogs = true;
-      _logLines.clear();
-    });
-
-    // Start log streaming
-    _logSub?.cancel();
-    _logSub = GatewayService.streamLogs().listen((log) {
-      if (!mounted) return;
-      setState(() {
-        _logLines.add('[${log.level.toUpperCase()}] ${log.message}');
-      });
-      _scrollLogs();
-    });
+    setState(() => _isStarting = true);
 
     try {
       final result = await InstallerService.startService();
       if (!mounted) return;
 
       if (result.exitCode == 0) {
-        // Wait a moment for gateway to be ready
         await Future.delayed(const Duration(seconds: 2));
         await _checkGatewayStatus();
         if (_isRunning) {
           _connectWebSocket();
         }
-      } else {
-        setState(() {
-          _logLines.add('[ERROR] Gateway failed to start: ${result.stderr}');
-        });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _logLines.add('[ERROR] Exception: $e');
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('启动失败: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isStarting = false);
     }
@@ -211,19 +154,17 @@ class _GatewayPageState extends State<GatewayPage>
   }
 
   Future<void> _switchProvider(String? providerId) async {
-    if (providerId == null || providerId == _currentProvider) return;
+    if (providerId == null) return;
 
     setState(() => _isRestarting = true);
     try {
-      // Switch provider in config
       await ConfigService.switchProvider(providerId);
+      ref.invalidate(currentProviderIdProvider);
+      ref.invalidate(configuredProviderMapProvider);
 
-      // Restart gateway if running
       if (_isRunning) {
         await _restartGateway();
       }
-
-      setState(() => _currentProvider = providerId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -233,16 +174,6 @@ class _GatewayPageState extends State<GatewayPage>
     } finally {
       if (mounted) setState(() => _isRestarting = false);
     }
-  }
-
-  void _scrollLogs() {
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (_logScrollController.hasClients) {
-        _logScrollController.jumpTo(
-          _logScrollController.position.maxScrollExtent,
-        );
-      }
-    });
   }
 
   Future<void> _sendMessage() async {
@@ -405,11 +336,37 @@ class _GatewayPageState extends State<GatewayPage>
   Widget _buildMainContent() {
     return Column(
       children: [
+        // Tab bar
+        TabBar(
+          controller: _tabController,
+          indicatorColor: CicadaColors.accent,
+          labelColor: CicadaColors.textPrimary,
+          unselectedLabelColor: CicadaColors.textTertiary,
+          tabs: const [
+            Tab(text: 'CONTROL'),
+            Tab(text: 'SESSIONS'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Tab content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildControlTab(),
+              const GatewaySessionsTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControlTab() {
+    return Column(
+      children: [
         // Model selector
         _buildModelSelector(),
-        const SizedBox(height: 16),
-        // Log panel (collapsible)
-        _buildLogPanel(),
         const SizedBox(height: 16),
         // Chat area
         Expanded(
@@ -428,8 +385,11 @@ class _GatewayPageState extends State<GatewayPage>
   }
 
   Widget _buildModelSelector() {
-    if (_isLoadingProviders) {
-      return Container(
+    final providersAsync = ref.watch(configuredProviderMapProvider);
+    final currentIdAsync = ref.watch(currentProviderIdProvider);
+
+    return providersAsync.when(
+      loading: () => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: CicadaColors.surface,
@@ -446,111 +406,83 @@ class _GatewayPageState extends State<GatewayPage>
             Text('加载模型配置...'),
           ],
         ),
-      );
-    }
-
-    if (_providers.isEmpty) {
-      return Container(
+      ),
+      error: (e, _) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: CicadaColors.surface,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.warning, color: CicadaColors.alert),
-            SizedBox(width: 12),
-            Text('未配置任何模型，请前往 模型配置 页面添加'),
+            const Icon(Icons.warning, color: CicadaColors.alert),
+            const SizedBox(width: 12),
+            Text('加载失败: $e'),
           ],
         ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: CicadaColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: CicadaColors.border),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.smart_toy, size: 20),
-          const SizedBox(width: 12),
-          const Text('当前模型:'),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DropdownButton<String>(
-              value: _currentProvider,
-              isExpanded: true,
-              underline: const SizedBox(),
-              items: _providers.map((p) {
-                final id = p['id'] as String;
-                final name = p['name'] as String? ?? id;
-                return DropdownMenuItem(
-                  value: id,
-                  child: Text(name),
-                );
-              }).toList(),
-              onChanged: _isRestarting ? null : _switchProvider,
+      data: (providerMap) {
+        if (providerMap.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: CicadaColors.surface,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning, color: CicadaColors.alert),
+                SizedBox(width: 12),
+                Text('未配置任何模型，请前往 模型配置 页面添加'),
+              ],
+            ),
+          );
+        }
+
+        final currentId = currentIdAsync.valueOrNull;
+        final providerIds = providerMap.keys.toList();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: CicadaColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: CicadaColors.border),
           ),
-          if (_isRestarting) ...[
-            const SizedBox(width: 12),
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 8),
-            const Text('重启中...'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLogPanel() {
-    return HudPanel(
-      title: 'LOGS',
-      titleIcon: Icons.terminal,
-      accent: CicadaColors.energy,
-      headerAction: IconButton(
-        icon: Icon(_showLogs ? Icons.expand_less : Icons.expand_more),
-        onPressed: () => setState(() => _showLogs = !_showLogs),
-        tooltip: _showLogs ? '收起' : '展开',
-      ),
-      child: SizedBox(
-        height: _showLogs ? 200 : 50,
-        child: _logLines.isEmpty
-            ? Center(
-                child: Text(
-                  _showLogs ? '暂无日志' : '点击展开查看日志',
-                  style: TextStyle(color: CicadaColors.textTertiary),
+          child: Row(
+            children: [
+              const Icon(Icons.smart_toy, size: 20),
+              const SizedBox(width: 12),
+              const Text('当前模型:'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButton<String>(
+                  value: currentId,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: providerIds.map((id) {
+                    return DropdownMenuItem(
+                      value: id,
+                      child: Text(id),
+                    );
+                  }).toList(),
+                  onChanged: _isRestarting ? null : _switchProvider,
                 ),
-              )
-            : ListView.builder(
-                controller: _logScrollController,
-                padding: const EdgeInsets.all(12),
-                itemCount: _logLines.length,
-                itemBuilder: (context, index) {
-                  final line = _logLines[index];
-                  Color lineColor = CicadaColors.textSecondary;
-                  if (line.contains('[ERROR]')) lineColor = CicadaColors.alert;
-                  if (line.contains('[WARN]')) lineColor = CicadaColors.energy;
-                  if (line.contains('[INFO]')) lineColor = CicadaColors.ok;
-
-                  return SelectableText(
-                    line,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                      color: lineColor,
-                    ),
-                  );
-                },
               ),
-      ),
+              if (_isRestarting) ...[
+                const SizedBox(width: 12),
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                const Text('重启中...'),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

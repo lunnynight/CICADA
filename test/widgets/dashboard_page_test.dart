@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/pages/dashboard_page.dart';
 
 void main() {
   group('DashboardPage', () {
     Widget buildPage({void Function(int)? onNavigate}) {
-      return MaterialApp(
-        home: Scaffold(
-          body: DashboardPage(onNavigate: onNavigate),
+      return ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DashboardPage(onNavigate: onNavigate),
+          ),
         ),
       );
     }
@@ -27,8 +30,7 @@ void main() {
     });
 
     testWidgets('shows loading indicator initially', (tester) async {
-      await tester.pumpWidget(buildPage());
-      await tester.pump();
+      await pumpAndWait(tester, buildPage());
       // Either loading or loaded state is valid
       expect(
         find.byType(CircularProgressIndicator).evaluate().isNotEmpty ||

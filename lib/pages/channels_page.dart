@@ -1,29 +1,28 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/theme/cicada_colors.dart';
 import '../app/widgets/hud_panel.dart';
+import '../providers/page_data_provider.dart';
 import '../services/gateway_service.dart';
 
-class ChannelsPage extends StatefulWidget {
+class ChannelsPage extends ConsumerStatefulWidget {
   const ChannelsPage({super.key});
 
   @override
-  State<ChannelsPage> createState() => _ChannelsPageState();
+  ConsumerState<ChannelsPage> createState() => _ChannelsPageState();
 }
 
-class _ChannelsPageState extends State<ChannelsPage> {
-  List<Channel> _channels = [];
-  bool _loading = true;
+class _ChannelsPageState extends ConsumerState<ChannelsPage> {
   bool _loggingIn = false;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadChannels();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 10),
-      (_) => _loadChannels(),
+      (_) => ref.invalidate(channelsProvider),
     );
   }
 
@@ -31,23 +30,6 @@ class _ChannelsPageState extends State<ChannelsPage> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadChannels() async {
-    setState(() => _loading = true);
-    try {
-      final channels = await GatewayService.getChannels();
-      if (mounted) {
-        setState(() {
-          _channels = channels;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
   }
 
   Future<void> _loginToChannel(String channel) async {
@@ -66,7 +48,7 @@ class _ChannelsPageState extends State<ChannelsPage> {
           ),
         );
         if (success) {
-          await _loadChannels();
+          ref.invalidate(channelsProvider);
         }
       }
     } finally {
@@ -78,18 +60,24 @@ class _ChannelsPageState extends State<ChannelsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final channelsAsync = ref.watch(channelsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _PageHeader(title: 'CHANNELS', onRefresh: _loadChannels),
+        _PageHeader(
+          title: 'CHANNELS',
+          onRefresh: () => ref.invalidate(channelsProvider),
+        ),
         const SizedBox(height: 24),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child:
-                _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildChannelsList(),
+            child: channelsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('加载失败: $e')),
+              data: (channels) => _buildChannelsList(channels),
+            ),
           ),
         ),
       ],
@@ -103,16 +91,16 @@ class _ChannelsPageState extends State<ChannelsPage> {
     _ChannelConfig('slack', 'Slack', Icons.workspaces, 'Messaging'),
   ];
 
-  Widget _buildChannelsList() {
+  Widget _buildChannelsList(List<Channel> channels) {
     return ListView.builder(
       itemCount: _availableChannels.length,
       itemBuilder:
-          (context, index) => _buildChannelCard(_availableChannels[index]),
+          (context, index) => _buildChannelCard(_availableChannels[index], channels),
     );
   }
 
-  Widget _buildChannelCard(_ChannelConfig config) {
-    final channel = _channels.firstWhere(
+  Widget _buildChannelCard(_ChannelConfig config, List<Channel> channels) {
+    final channel = channels.firstWhere(
       (c) => c.name.toLowerCase() == config.id,
       orElse:
           () => Channel(

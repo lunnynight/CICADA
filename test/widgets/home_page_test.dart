@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/pages/home_page.dart';
 
 void main() {
   group('HomePage', () {
     Widget buildHomePage() {
-      return const MaterialApp(
-        home: HomePage(),
+      return const ProviderScope(
+        child: MaterialApp(
+          home: HomePage(),
+        ),
       );
     }
 
@@ -138,7 +141,7 @@ void main() {
 
       await pumpAndWait(tester, buildHomePage());
 
-      // Bottom nav: 仪表盘(0), Agent(1), 技能(2), 设置(3), 更多(4)
+      // Bottom nav: 仪表盘(0), Gateway(1), 渠道(2), 设置(13), 更多(drawer)
       // Tap '设置' destination in the NavigationBar
       await tester.tap(find.text('设置'));
       await tester.pump(const Duration(milliseconds: 300));

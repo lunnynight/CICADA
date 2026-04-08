@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/theme/cicada_colors.dart';
 import '../models/skill.dart';
+import '../providers/page_data_provider.dart';
 import '../services/bundled_skill_service.dart';
 import '../services/installer_service.dart';
-import '../services/skill_discovery_service.dart';
 import '../services/skill_installer_service.dart';
 import 'clawhub_page.dart';
 import 'skill_card.dart';
@@ -69,18 +70,16 @@ class _SkillsPageState extends State<SkillsPage> with SingleTickerProviderStateM
   }
 }
 
-class _BundledSkillsTab extends StatefulWidget {
+class _BundledSkillsTab extends ConsumerStatefulWidget {
   const _BundledSkillsTab();
 
   @override
-  State<_BundledSkillsTab> createState() => _BundledSkillsTabState();
+  ConsumerState<_BundledSkillsTab> createState() => _BundledSkillsTabState();
 }
 
-class _BundledSkillsTabState extends State<_BundledSkillsTab> {
-  List<Skill> _allSkills = [];
+class _BundledSkillsTabState extends ConsumerState<_BundledSkillsTab> {
   List<Skill> _filtered = [];
   final Set<String> _installing = {};
-  bool _loading = true;
   bool _syncing = false;
   String _search = '';
   String _categoryFilter = '全部';
@@ -91,14 +90,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    await Future.wait([
-      _fetchSkills(),
-      _checkOpenClawStatus(),
-    ]);
+    _checkOpenClawStatus();
   }
 
   Future<void> _checkOpenClawStatus() async {
@@ -106,25 +98,14 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
     if (mounted) setState(() => _openclawStatus = status);
   }
 
-  Future<void> _fetchSkills() async {
-    final skills = await SkillDiscoveryService.discoverAll();
-    if (mounted) {
-      setState(() {
-        _allSkills = skills;
-        _applyFilter();
-        _loading = false;
-      });
-    }
-  }
-
-  void _applyFilter() {
+  void _applyFilter(List<Skill> allSkills) {
     List<Skill> base;
     if (_search.isEmpty) {
-      base = List.of(_allSkills);
+      base = List.of(allSkills);
     } else {
       final q = _search.toLowerCase();
       base =
-          _allSkills
+          allSkills
               .where(
                 (s) =>
                     s.name.toLowerCase().contains(q) ||
@@ -192,12 +173,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
   void _onSearch(String value) {
     setState(() {
       _search = value;
-      _applyFilter();
     });
-    if (value.isEmpty) {
-      setState(() => _loading = true);
-      _fetchSkills();
-    }
   }
 
   Future<void> _install(Skill skill) async {
@@ -210,7 +186,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
       } else {
         await SkillInstallerService.installFromClawHub(skill.slug);
       }
-      await _fetchSkills();
+      ref.invalidate(skillsProvider);
     } catch (_) {}
     if (mounted) setState(() => _installing.remove(skill.slug));
   }
@@ -219,7 +195,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
     setState(() => _installing.add(skill.slug));
     try {
       await SkillInstallerService.uninstall(skill.slug);
-      await _fetchSkills();
+      ref.invalidate(skillsProvider);
     } catch (_) {}
     if (mounted) setState(() => _installing.remove(skill.slug));
   }
@@ -227,7 +203,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
   Future<void> _syncBundled() async {
     setState(() => _syncing = true);
     final count = await BundledSkillService.syncBundledSkills();
-    await _fetchSkills();
+    ref.invalidate(skillsProvider);
     if (mounted) {
       setState(() => _syncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,6 +219,21 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final skillsAsync = ref.watch(skillsProvider);
+
+    return skillsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: CicadaColors.data),
+      ),
+      error: (e, _) => Center(child: Text('加载失败: $e')),
+      data: (allSkills) {
+        _applyFilter(allSkills);
+        return _buildContent();
+      },
+    );
+  }
+
+  Widget _buildContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -318,10 +309,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
                   IconButton(
                     icon: const Icon(Icons.refresh, color: CicadaColors.muted),
                     tooltip: '刷新',
-                    onPressed: () {
-                      setState(() => _loading = true);
-                      _loadData();
-                    },
+                    onPressed: () => ref.invalidate(skillsProvider),
                   ),
                 ],
               ),
@@ -459,7 +447,6 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
                             onSelected: (_) {
                               setState(() {
                                 _categoryFilter = cat;
-                                _applyFilter();
                               });
                             },
                             selectedColor: CicadaColors.accent,
@@ -491,11 +478,7 @@ class _BundledSkillsTabState extends State<_BundledSkillsTab> {
         ),
         Expanded(
           child:
-              _loading
-                  ? const Center(
-                    child: CircularProgressIndicator(color: CicadaColors.data),
-                  )
-                  : _filtered.isEmpty
+              _filtered.isEmpty
                   ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,

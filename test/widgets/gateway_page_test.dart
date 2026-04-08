@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/pages/gateway_page.dart';
 
@@ -11,7 +12,9 @@ void _suppressOverflow() {
 
 void main() {
   group('GatewayPage', () {
-    Widget buildPage() => const MaterialApp(home: Scaffold(body: GatewayPage()));
+    Widget buildPage() => const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: GatewayPage())),
+        );
 
     Future<void> pumpAndWait(WidgetTester tester, Widget widget) async {
       tester.view.physicalSize = const Size(1200, 900);

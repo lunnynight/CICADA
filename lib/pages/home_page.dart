@@ -12,13 +12,20 @@ import 'webui_page.dart';
 import 'settings_page.dart';
 import 'diagnostic_page.dart';
 import 'token_page.dart';
-import 'chat_page.dart';
-import 'sessions_page.dart';
 import 'channels_page.dart';
 import 'logs_page.dart';
 import 'memory_page.dart';
 import 'claude_code_page.dart';
 import 'gateway_page.dart';
+
+/// Navigation index constants — use these instead of hardcoded ints.
+class NavIndex {
+  static const dashboard = 0, gateway = 1, channels = 2;
+  static const models = 3, skills = 4, mcp = 5;
+  static const logs = 6, token = 7, memory = 8;
+  static const claudeCode = 9, webui = 10, diagnostic = 11;
+  static const setup = 12, settings = 13;
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,29 +46,32 @@ class _HomePageState extends State<HomePage> {
   Timer? _statusTimer;
 
   static const _navItems = [
-    _NavItem(Icons.dashboard, '仪表盘'),         // 0
-    _NavItem(Icons.download, '安装向导'),         // 1
-    _NavItem(Icons.chat, 'Agent对话'),            // 2
-    _NavItem(Icons.history, '会话管理'),           // 3
-    _NavItem(Icons.hub, '渠道管理'),              // 4
-    _NavItem(Icons.terminal, '日志查看'),          // 5
-    _NavItem(Icons.memory, '记忆搜索'),           // 6
-    _NavItem(Icons.smart_toy, '模型配置'),         // 7
-    _NavItem(Icons.extension, '技能商店'),         // 8
-    _NavItem(Icons.power, '插件管理'),            // 9
-    _NavItem(Icons.web, 'WebUI'),                // 10
-    _NavItem(Icons.analytics, 'Token分析'),       // 11
-    _NavItem(Icons.medical_services, '诊断中心'),  // 12
-    _NavItem(Icons.code, 'Claude Code'),          // 13
-    _NavItem(Icons.router, 'Gateway'),             // 14
-    _NavItem(Icons.settings, '设置'),             // 15
+    // Primary
+    _NavItem(Icons.dashboard, '仪表盘'),           // 0
+    _NavItem(Icons.router, 'Gateway'),              // 1
+    _NavItem(Icons.hub, '渠道管理'),                // 2
+    // Configuration
+    _NavItem(Icons.smart_toy, '模型配置'),           // 3
+    _NavItem(Icons.extension, '技能商店'),           // 4
+    _NavItem(Icons.power, '插件管理'),              // 5
+    // Monitoring
+    _NavItem(Icons.terminal, '日志查看'),            // 6
+    _NavItem(Icons.analytics, 'Token分析'),         // 7
+    _NavItem(Icons.memory, '记忆搜索'),             // 8
+    // Tools
+    _NavItem(Icons.code, 'Claude Code'),            // 9
+    _NavItem(Icons.web, 'WebUI'),                   // 10
+    _NavItem(Icons.medical_services, '诊断中心'),    // 11
+    // System
+    _NavItem(Icons.download, '安装向导'),            // 12
+    _NavItem(Icons.settings, '设置'),               // 13
   ];
 
   // Bottom nav: 5 primary items (indices into _navItems)
-  static const _bottomNavIndices = [0, 2, 8, 15, -1]; // -1 = drawer trigger
-  static const _bottomNavLabels = ['仪表盘', 'Agent', '技能', '设置', '更多'];
+  static const _bottomNavIndices = [0, 1, 2, 13, -1]; // -1 = drawer trigger
+  static const _bottomNavLabels = ['仪表盘', 'Gateway', '渠道', '设置', '更多'];
   static const _bottomNavIcons = [
-    Icons.dashboard, Icons.chat, Icons.extension, Icons.settings, Icons.menu,
+    Icons.dashboard, Icons.router, Icons.hub, Icons.settings, Icons.menu,
   ];
 
   void _navigateTo(int index) {
@@ -154,7 +164,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDrawer() {
-    const drawerIndices = [1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14];
+    const drawerIndices = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     return Drawer(
       backgroundColor: CicadaColors.surface,
       child: SafeArea(
@@ -221,22 +231,20 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildPage(int index) {
     switch (index) {
-      case 0: return DashboardPage(key: const ValueKey('dashboard'), onNavigate: _navigateTo);
-      case 1: return SetupPage(key: const ValueKey('setup'), onSetupComplete: () => _navigateTo(2));
-      case 2: return const ChatPage(key: ValueKey('chat'));
-      case 3: return const SessionsPage(key: ValueKey('sessions'));
-      case 4: return const ChannelsPage(key: ValueKey('channels'));
-      case 5: return const LogsPage(key: ValueKey('logs'));
-      case 6: return const MemoryPage(key: ValueKey('memory'));
-      case 7: return const ModelsPage(key: ValueKey('models'));
-      case 8: return const SkillsPage(key: ValueKey('skills'));
-      case 9: return const McpPage(key: ValueKey('mcp'));
-      case 10: return const WebUIPage(key: ValueKey('webui'));
-      case 11: return const TokenPage(key: ValueKey('token'));
-      case 12: return DiagnosticPage(key: const ValueKey('diagnostic'), onNavigate: _navigateTo);
-      case 13: return const ClaudeCodePage(key: ValueKey('claude_code'));
-      case 14: return const GatewayPage(key: ValueKey('gateway'));
-      case 15: return const SettingsPage(key: ValueKey('settings'));
+      case NavIndex.dashboard: return DashboardPage(key: const ValueKey('dashboard'), onNavigate: _navigateTo);
+      case NavIndex.gateway: return const GatewayPage(key: ValueKey('gateway'));
+      case NavIndex.channels: return const ChannelsPage(key: ValueKey('channels'));
+      case NavIndex.models: return const ModelsPage(key: ValueKey('models'));
+      case NavIndex.skills: return const SkillsPage(key: ValueKey('skills'));
+      case NavIndex.mcp: return const McpPage(key: ValueKey('mcp'));
+      case NavIndex.logs: return const LogsPage(key: ValueKey('logs'));
+      case NavIndex.token: return const TokenPage(key: ValueKey('token'));
+      case NavIndex.memory: return const MemoryPage(key: ValueKey('memory'));
+      case NavIndex.claudeCode: return const ClaudeCodePage(key: ValueKey('claude_code'));
+      case NavIndex.webui: return const WebUIPage(key: ValueKey('webui'));
+      case NavIndex.diagnostic: return DiagnosticPage(key: const ValueKey('diagnostic'), onNavigate: _navigateTo);
+      case NavIndex.setup: return SetupPage(key: const ValueKey('setup'), onSetupComplete: () => _navigateTo(NavIndex.gateway));
+      case NavIndex.settings: return const SettingsPage(key: ValueKey('settings'));
       default: return const SizedBox.shrink();
     }
   }

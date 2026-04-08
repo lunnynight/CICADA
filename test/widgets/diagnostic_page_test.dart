@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/pages/diagnostic_page.dart';
+import '../../lib/pages/home_page.dart' show NavIndex;
 import '../../lib/models/diagnostic.dart';
 
 /// Fake report with one finding per navigation action, guaranteeing all
@@ -38,14 +40,16 @@ DiagnosticReport _fakeReport() {
 
 void main() {
   group('DiagnosticPage navigation callbacks', () {
-    testWidgets('goto_setup triggers onNavigate with index 1', (tester) async {
+    testWidgets('goto_setup triggers onNavigate with NavIndex.setup', (tester) async {
       int? capturedIndex;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: DiagnosticPage(
-            onNavigate: (i) => capturedIndex = i,
-            diagnosticsOverride: _fakeReport(),
+        ProviderScope(
+          child: MaterialApp(
+            home: DiagnosticPage(
+              onNavigate: (i) => capturedIndex = i,
+              diagnosticsOverride: _fakeReport(),
+            ),
           ),
         ),
       );
@@ -58,17 +62,19 @@ void main() {
       await tester.tap(setupBtn);
       await tester.pump();
 
-      expect(capturedIndex, equals(1));
+      expect(capturedIndex, equals(NavIndex.setup));
     });
 
-    testWidgets('goto_models triggers onNavigate with index 7', (tester) async {
+    testWidgets('goto_models triggers onNavigate with NavIndex.models', (tester) async {
       int? capturedIndex;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: DiagnosticPage(
-            onNavigate: (i) => capturedIndex = i,
-            diagnosticsOverride: _fakeReport(),
+        ProviderScope(
+          child: MaterialApp(
+            home: DiagnosticPage(
+              onNavigate: (i) => capturedIndex = i,
+              diagnosticsOverride: _fakeReport(),
+            ),
           ),
         ),
       );
@@ -81,18 +87,20 @@ void main() {
       await tester.tap(modelsBtn);
       await tester.pump();
 
-      expect(capturedIndex, equals(7));
+      expect(capturedIndex, equals(NavIndex.models));
     });
 
-    testWidgets('goto_dashboard triggers onNavigate with index 0',
+    testWidgets('goto_dashboard triggers onNavigate with NavIndex.dashboard',
         (tester) async {
       int? capturedIndex;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: DiagnosticPage(
-            onNavigate: (i) => capturedIndex = i,
-            diagnosticsOverride: _fakeReport(),
+        ProviderScope(
+          child: MaterialApp(
+            home: DiagnosticPage(
+              onNavigate: (i) => capturedIndex = i,
+              diagnosticsOverride: _fakeReport(),
+            ),
           ),
         ),
       );
@@ -105,7 +113,7 @@ void main() {
       await tester.tap(dashBtn);
       await tester.pump();
 
-      expect(capturedIndex, equals(0));
+      expect(capturedIndex, equals(NavIndex.dashboard));
     });
   });
 }
