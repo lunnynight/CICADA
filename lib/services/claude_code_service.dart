@@ -87,12 +87,19 @@ class SessionMessage {
 class ClaudeCodeService {
   ClaudeCodeService._();
 
+  static String? _claudeDirOverride;
+
+  /// Override the Claude config directory for testing. Pass null to reset.
+  static void overrideClaudeDirForTest(String? path) {
+    _claudeDirOverride = path;
+  }
+
   static String get _homePath =>
       Platform.environment['USERPROFILE'] ??
       Platform.environment['HOME'] ??
       '';
 
-  static String get _claudeDir => '$_homePath/.claude';
+  static String get _claudeDir => _claudeDirOverride ?? '$_homePath/.claude';
 
   // JSON I/O delegated to shared JsonFile utility
   static Future<Map<String, dynamic>> _readJsonFile(String path) =>
@@ -269,11 +276,11 @@ class ClaudeCodeService {
 
     await for (final projectEntry in projectsDir.list()) {
       if (projectEntry is! Directory) continue;
-      final projectName = projectEntry.path.split('/').last;
+      final projectName = projectEntry.path.split(Platform.pathSeparator).last;
 
       await for (final file in projectEntry.list()) {
         if (file is! File || !file.path.endsWith('.jsonl')) continue;
-        final fileName = file.path.split('/').last;
+        final fileName = file.path.split(Platform.pathSeparator).last;
         final sessionId = fileName.replaceAll('.jsonl', '');
 
         try {

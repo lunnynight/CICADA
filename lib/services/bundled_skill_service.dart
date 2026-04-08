@@ -36,6 +36,17 @@ class BundledSkillMeta {
 /// bundled assets to the OpenClaw skills directory.
 class BundledSkillService {
   static List<BundledSkillMeta>? _cachedManifest;
+  static String? _skillsDirOverride;
+
+  /// Clear cached manifest for testing.
+  static void clearCacheForTest() {
+    _cachedManifest = null;
+  }
+
+  /// Override skills directory for testing. Pass null to reset.
+  static void overrideSkillsDirForTest(String? path) {
+    _skillsDirOverride = path;
+  }
 
   /// Load the bundled skills manifest from assets
   static Future<List<BundledSkillMeta>> loadManifest() async {
@@ -58,6 +69,7 @@ class BundledSkillService {
 
   /// Get the OpenClaw skills directory path
   static String _getSkillsDir() {
+    if (_skillsDirOverride != null) return _skillsDirOverride!;
     final home =
         Platform.environment['USERPROFILE'] ??
         Platform.environment['HOME'] ??
