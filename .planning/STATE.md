@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-08T05:20:29.711Z"
+last_updated: "2026-04-08T06:00:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
   percent: 100
 ---
 
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 03-03-PLAN.md (model and core unit tests)
+**Session:** Completed 03-01-PLAN.md (DiagnosticPage navigation widget tests)
 
 ## Project Reference
 
@@ -72,6 +72,7 @@ Phase 1 [██████████] → Phase 2 [████████�
 - testWidgets skip 参数类型为 bool? 而非 String — 跳过原因放注释中
 - assets/bundled/nodejs/ 目录需要存在 — pubspec.yaml 声明了该目录，缺失会导致 Windows 构建失败
 - DiagnosticReport/DashboardStats 无 fromJson/toJson — 仅测试构造函数和字段访问
+- DiagnosticPage 导航测试用 @visibleForTesting diagnosticsOverride 注入假报告 — 避免依赖真实环境状态
 - PlatformInfo Windows 专属测试用 skip: !Platform.isWindows 保证跨平台可移植性
 
 ### Known Constraints

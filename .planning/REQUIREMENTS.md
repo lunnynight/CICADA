@@ -36,9 +36,9 @@
 
 ### 导航修复
 
-- [ ] **NAV-01**: diagnostic_page.dart navigate_setup 导航实现
-- [ ] **NAV-02**: diagnostic_page.dart navigate_models 导航实现
-- [ ] **NAV-03**: diagnostic_page.dart navigate_dashboard 导航实现
+- [x] **NAV-01**: diagnostic_page.dart navigate_setup 导航实现
+- [x] **NAV-02**: diagnostic_page.dart navigate_models 导航实现
+- [x] **NAV-03**: diagnostic_page.dart navigate_dashboard 导航实现
 
 ### 文件拆分
 
@@ -89,9 +89,9 @@
 | INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
 | COV-01 | Phase 3 | Complete |
-| NAV-01 | Phase 3 | Pending |
-| NAV-02 | Phase 3 | Pending |
-| NAV-03 | Phase 3 | Pending |
+| NAV-01 | Phase 3 | Complete |
+| NAV-02 | Phase 3 | Complete |
+| NAV-03 | Phase 3 | Complete |
 | SPLIT-01 | Phase 3 | Pending |
 | SPLIT-02 | Phase 3 | Pending |
 
