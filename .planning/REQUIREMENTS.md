@@ -19,10 +19,10 @@
 
 ### Widget 测试
 
-- [ ] **WDGT-01**: EnvironmentDetector 组件渲染和交互测试
-- [ ] **WDGT-02**: InstallationPanel 组件渲染和交互测试
+- [x] **WDGT-01**: EnvironmentDetector 组件渲染和交互测试
+- [x] **WDGT-02**: InstallationPanel 组件渲染和交互测试
 - [ ] **WDGT-03**: SetupPageNew 页面完整渲染测试
-- [ ] **WDGT-04**: DashboardPage 核心 widget（StatCard, AttentionPanel, QuickActionButton）测试
+- [x] **WDGT-04**: DashboardPage 核心 widget（StatCard, AttentionPanel, QuickActionButton）测试
 - [ ] **WDGT-05**: HomePage 导航切换测试
 
 ### 集成测试
@@ -81,10 +81,10 @@
 | TEST-07 | Phase 1 | Pending |
 | TEST-08 | Phase 1 | Pending |
 | TEST-09 | Phase 1 | Complete |
-| WDGT-01 | Phase 2 | Pending |
-| WDGT-02 | Phase 2 | Pending |
+| WDGT-01 | Phase 2 | Complete |
+| WDGT-02 | Phase 2 | Complete |
 | WDGT-03 | Phase 2 | Pending |
-| WDGT-04 | Phase 2 | Pending |
+| WDGT-04 | Phase 2 | Complete |
 | WDGT-05 | Phase 2 | Pending |
 | INTG-01 | Phase 2 | Pending |
 | INTG-02 | Phase 2 | Pending |

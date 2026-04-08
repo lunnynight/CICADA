@@ -2,38 +2,38 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-08T00:55:37.270Z"
+status: executing
+last_updated: "2026-04-08T02:06:34.428Z"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 01-02-PLAN.md (McpService + ProxyService + InstallerService + IntegrationService + DiagnosticService tests)
+**Session:** Completed 02-01-PLAN.md (widget tests: StatCard, AttentionPanel, QuickActionButton, EnvironmentDetector, InstallationPanel)
 
 ## Project Reference
 
 **Core Value:** 测试覆盖率从 10.6% 提升到 80%，并将所有超过 800 行的大文件拆分为可维护的模块，确保重构不破坏现有功能。
 
-**Current Focus:** Phase 01 — service-unit-tests (COMPLETE)
+**Current Focus:** Phase 02 — widget
 
 ## Current Position
 
-Phase: 01 (service-unit-tests) — COMPLETE
-Plan: 3 of 3
+Phase: 02 (widget) — EXECUTING
+Plan: 2 of 3
 **Phase:** 2
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 1 complete, starting plan 2
+**Status:** Executing Phase 02
 
 ```
-Progress: [██████████] 100%
-Phase 1 [██████████] → Phase 2 [          ] → Phase 3 [          ]
+Progress: [███████   ] 67%
+Phase 1 [██████████] → Phase 2 [███       ] → Phase 3 [          ]
 ```
 
 ## Performance Metrics
@@ -47,6 +47,7 @@ Phase 1 [██████████] → Phase 2 [          ] → Phase 3 [ 
 | Phase 01 P01 | 6min | 3 tasks | 6 files |
 | Phase 01 P02 | 6min | 5 tasks | 6 files |
 | Phase 01 P03 | 4min | 3 tasks | 4 files |
+| Phase 02 P01 | 8min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Phase 1 [██████████] → Phase 2 [          ] → Phase 3 [ 
 - SkillDiscoveryService 测试可直接调用 discoverAll() 无需 mock（读本地文件系统 + bundled assets）
 - ConfigService.readConfig() 必须返回可变 map 副本 — const map 导致 ProxyService.saveConfig 静默失败
 - ProxyConfig 需要 type=ProxyType.http 才能使 isConfigured 为 true
+- FakeSetupState extends SetupState，override build() 返回固定数据 — 避免触发 detectEnvironment() 副作用
+- QuickActionButton 测试必须用 Row 包裹，因为 widget 内部使用 Expanded
+- SetupStateData.initial() 默认 detecting:true，需要非检测状态的测试必须显式 copyWith(detecting:false)
 
 ### Known Constraints
 
@@ -75,7 +79,7 @@ None
 
 ## Session Continuity
 
-**To resume:** Phase 01 complete. Transition to Phase 02.
+**To resume:** Phase 02 Plan 01 complete. Continue with Phase 02 Plan 02.
 
 ---
 *State initialized: 2026-04-08*

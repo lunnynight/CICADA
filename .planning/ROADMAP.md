@@ -40,7 +40,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Dashboard widgets (StatCard, AttentionPanel, QuickActionButton) + Setup sub-widgets (EnvironmentDetector, InstallationPanel) tests (Wave 1)
+- [x] 02-01-PLAN.md — Dashboard widgets (StatCard, AttentionPanel, QuickActionButton) + Setup sub-widgets (EnvironmentDetector, InstallationPanel) tests (Wave 1)
 - [ ] 02-02-PLAN.md — SetupPage full page render + HomePage navigation switching tests (Wave 1)
 - [ ] 02-03-PLAN.md — Patrol integration test framework setup + smoke test (Wave 1)
 
@@ -61,7 +61,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 服务层单元测试 | 3/3 | Complete | 2026-04-08 |
-| 2. Widget 与集成测试 | 0/3 | Planning | - |
+| 2. Widget 与集成测试 | 1/3 | In Progress|  |
 | 3. 收尾与达标 | 0/0 | Not started | - |
 
 ---
