@@ -21,12 +21,12 @@ Cicada（知了猴）是 OpenClaw 一键启动器社区版，基于 Flutter 3.29
 - ✓ Riverpod 状态管理引入 — 重构 Phase 1
 - ✓ 成熟组件库引入（easy_stepper, flutter_settings_screens, patrol, mockito） — 重构 Phase 1
 - ✓ 基础测试通过（15/15） — 重构 Phase 2
+- ✓ 服务层单元测试（DiagnosticService, TokenService, IntegrationService, GatewayService, InstallerService） — Validated in Phase 1: 服务层单元测试
+- ✓ Widget 测试（EnvironmentDetector, InstallationPanel, SetupPageNew） — Validated in Phase 2: Widget 与集成测试
+- ✓ 集成测试（Patrol 框架） — Validated in Phase 2: Widget 与集成测试
 
 ### Active
 
-- [ ] 服务层单元测试（DiagnosticService, TokenService, IntegrationService, GatewayService, InstallerService）
-- [ ] Widget 测试（EnvironmentDetector, InstallationPanel, SetupPageNew）
-- [ ] 集成测试（Patrol 框架）
 - [ ] 测试覆盖率达到 80%
 - [ ] diagnostic_page.dart 导航 TODO 完成（navigate_setup, navigate_models, navigate_dashboard）
 - [ ] settings_page.dart 拆分（当前 1045 行，目标 <800 行）
@@ -82,4 +82,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after initialization*
+*Last updated: 2026-04-08 after Phase 2 (Widget 与集成测试) completion*
