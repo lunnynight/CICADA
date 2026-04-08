@@ -42,8 +42,8 @@
 
 ### 文件拆分
 
-- [ ] **SPLIT-01**: settings_page.dart 拆分为多个文件，每个 < 800 行
-- [ ] **SPLIT-02**: skills_page.dart 拆分为多个文件，每个 < 800 行
+- [x] **SPLIT-01**: settings_page.dart 拆分为多个文件，每个 < 800 行
+- [x] **SPLIT-02**: skills_page.dart 拆分为多个文件，每个 < 800 行
 
 ## v2 Requirements
 
@@ -92,8 +92,8 @@
 | NAV-01 | Phase 3 | Complete |
 | NAV-02 | Phase 3 | Complete |
 | NAV-03 | Phase 3 | Complete |
-| SPLIT-01 | Phase 3 | Pending |
-| SPLIT-02 | Phase 3 | Pending |
+| SPLIT-01 | Phase 3 | Complete |
+| SPLIT-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 22 total

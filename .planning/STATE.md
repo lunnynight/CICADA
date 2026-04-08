@@ -15,7 +15,7 @@ progress:
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 03-01-PLAN.md (DiagnosticPage navigation widget tests)
+**Session:** Completed 03-02-PLAN.md (settings_page + skills_page file splits)
 
 ## Project Reference
 
@@ -42,7 +42,7 @@ Phase 1 [██████████] → Phase 2 [████████�
 |--------|----------|---------|--------|
 | Test coverage | 10.6% | 10.6% | 80% |
 | Passing tests | 15 | 112 | TBD |
-| Files > 800 lines | 2 | 2 | 0 |
+| Files > 800 lines | 2 | 0 | 0 |
 | Nav TODOs | 3 | 3 | 0 |
 | Phase 01 P01 | 6min | 3 tasks | 6 files |
 | Phase 01 P02 | 6min | 5 tasks | 6 files |
@@ -51,6 +51,8 @@ Phase 1 [██████████] → Phase 2 [████████�
 
 | Phase 02 P02 | 35min | 2 tasks | 2 files |
 | Phase 03 P03 | 8min | 2 tasks | 10 files |
+
+| Phase 03 P02 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -74,6 +76,9 @@ Phase 1 [██████████] → Phase 2 [████████�
 - DiagnosticReport/DashboardStats 无 fromJson/toJson — 仅测试构造函数和字段访问
 - DiagnosticPage 导航测试用 @visibleForTesting diagnosticsOverride 注入假报告 — 避免依赖真实环境状态
 - PlatformInfo Windows 专属测试用 skip: !Platform.isWindows 保证跨平台可移植性
+- settings_integration_section.dart 额外提取 — 提取 dialogs+proxy 后 settings_page 仍 937 行，需继续提取 Feishu 集成段才能达到 <800 行
+- SettingsIntegrationSection 为 StatefulWidget — 自持 TextEditingControllers 和本地 UI 状态（_showFeishuConfig, _testingFeishu）
+- Painters 改为 public（去掉 _ 前缀）— 移入 skill_card.dart 后 private 前缀会导致文件作用域限制
 
 ### Known Constraints
 
