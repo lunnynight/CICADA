@@ -23,7 +23,7 @@ jobs:
         run: flutter pub get
 
       - name: Prepare bundled dependencies
-        run: dart scripts/prepare_bundled_deps.dart || echo "Warning: Failed to prepare bundled deps"
+        run: "dart scripts/prepare_bundled_deps.dart || true"
 
       - name: Build Windows
         run: flutter build windows --release
