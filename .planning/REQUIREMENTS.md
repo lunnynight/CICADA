@@ -9,9 +9,9 @@
 
 - [x] **TEST-01**: DiagnosticService 所有公开方法有单元测试覆盖
 - [x] **TEST-02**: TokenService 所有公开方法有单元测试覆盖
-- [ ] **TEST-03**: IntegrationService 所有公开方法有单元测试覆盖
+- [x] **TEST-03**: IntegrationService 所有公开方法有单元测试覆盖
 - [ ] **TEST-04**: GatewayService 所有公开方法有单元测试覆盖
-- [ ] **TEST-05**: InstallerService 所有公开方法有单元测试覆盖
+- [x] **TEST-05**: InstallerService 所有公开方法有单元测试覆盖
 - [x] **TEST-06**: ConfigService 所有公开方法有单元测试覆盖
 - [ ] **TEST-07**: SkillDiscoveryService / SkillInstallerService 所有公开方法有单元测试覆盖
 - [ ] **TEST-08**: UpdateService 所有公开方法有单元测试覆盖
@@ -74,9 +74,9 @@
 |-------------|-------|--------|
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
-| TEST-03 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Pending |
-| TEST-05 | Phase 1 | Pending |
+| TEST-05 | Phase 1 | Complete |
 | TEST-06 | Phase 1 | Complete |
 | TEST-07 | Phase 1 | Pending |
 | TEST-08 | Phase 1 | Pending |

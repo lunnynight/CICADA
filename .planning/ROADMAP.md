@@ -6,7 +6,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: 服务层单元测试** - 为所有服务层公开方法建立单元测试覆盖
+- [x] **Phase 1: 服务层单元测试** - 为所有服务层公开方法建立单元测试覆盖
 - [ ] **Phase 2: Widget 与集成测试** - 完成组件测试和 Patrol 集成测试框架
 - [ ] **Phase 3: 收尾与达标** - 修复导航 TODO、拆分大文件、达成 80% 覆盖率目标
 
@@ -25,7 +25,7 @@
 
 Plans:
 - [x] 01-01-PLAN.md — Mock infrastructure + TokenService pure tests + ConfigService CRUD tests (Wave 1)
-- [ ] 01-02-PLAN.md — McpService, ProxyService, InstallerService, DiagnosticService tests (Wave 2)
+- [x] 01-02-PLAN.md — McpService, ProxyService, InstallerService, DiagnosticService tests (Wave 2)
 - [x] 01-03-PLAN.md — SkillInstallerService, SkillDiscoveryService, UpdateService, GatewayService tests (Wave 2)
 
 ### Phase 2: Widget 与集成测试
@@ -56,7 +56,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 服务层单元测试 | 2/3 | In Progress|  |
+| 1. 服务层单元测试 | 3/3 | Complete | 2026-04-08 |
 | 2. Widget 与集成测试 | 0/0 | Not started | - |
 | 3. 收尾与达标 | 0/0 | Not started | - |
 
