@@ -34,6 +34,7 @@ class _LogsPageState extends State<LogsPage> {
 
   Future<void> _loadInitialLogs() async {
     final logs = await GatewayService.getLogs(lines: 100);
+    if (!mounted) return;
     setState(() {
       _logs.addAll(logs);
     });

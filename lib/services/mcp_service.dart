@@ -13,9 +13,17 @@ import '../models/mcp_server.dart';
 ///
 /// Manages MCP server configurations stored in `~/.openclaw/mcp.json`.
 class McpService {
+  static String? _mcpConfigPathOverride;
+
+  /// Override the MCP config path for testing. Pass null to restore default.
+  static void overrideMcpConfigPathForTest(String? path) {
+    _mcpConfigPathOverride = path;
+  }
+
   static String get _homePath =>
       Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-  static String get _mcpConfigPath => '$_homePath/.openclaw/mcp.json';
+  static String get _mcpConfigPath =>
+      _mcpConfigPathOverride ?? '$_homePath/.openclaw/mcp.json';
 
   /// Get all configured MCP servers.
   static Future<List<McpServer>> getAll() async {
