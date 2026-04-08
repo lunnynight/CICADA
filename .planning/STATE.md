@@ -8,8 +8,8 @@ progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # State: Cicada 重构 Phase 3-5
@@ -26,14 +26,14 @@ progress:
 ## Current Position
 
 Phase: 01 (service-unit-tests) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 **Phase:** 1 — 服务层单元测试
-**Plan:** 01-01 complete, next 01-02
+**Plan:** 01-01, 01-03 complete, next 01-02
 **Status:** Executing Phase 01
 
 ```
-Progress: [███░░░░░░░] 33%
-Phase 1 [███       ] → Phase 2 [          ] → Phase 3 [          ]
+Progress: [██████░░░░] 67%
+Phase 1 [██████    ] → Phase 2 [          ] → Phase 3 [          ]
 ```
 
 ## Performance Metrics
@@ -41,10 +41,11 @@ Phase 1 [███       ] → Phase 2 [          ] → Phase 3 [          ]
 | Metric | Baseline | Current | Target |
 |--------|----------|---------|--------|
 | Test coverage | 10.6% | 10.6% | 80% |
-| Passing tests | 15 | 36 | TBD |
+| Passing tests | 15 | 72 | TBD |
 | Files > 800 lines | 2 | 2 | 0 |
 | Nav TODOs | 3 | 3 | 0 |
 | Phase 01 P01 | 6min | 3 tasks | 6 files |
+| Phase 01 P03 | 4min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -52,7 +53,8 @@ Phase 1 [███       ] → Phase 2 [          ] → Phase 3 [          ]
 
 - 先补测试再拆文件 — 有测试保障后拆文件更安全，能及时发现回归
 - static 方法 mock 策略已确立 — ProcessRunner 接口用于 CLI mock，ConfigService 用 backup/restore 模式测试
-- ConfigService.readConfig() 返回可变 map 副本 — 修复 const map 不可修改 bug
+- HealthStatus.fromJson 需要显式 Map<String, dynamic> 类型标注避免 Dart 空 map 类型推断问题
+- SkillDiscoveryService 测试可直接调用 discoverAll() 无需 mock（读本地文件系统 + bundled assets）
 
 ### Known Constraints
 
@@ -70,7 +72,7 @@ None
 
 ## Session Continuity
 
-**To resume:** Execute 01-02-PLAN.md (DiagnosticService + IntegrationService tests, Wave 2).
+**To resume:** Execute 01-02-PLAN.md (McpService + ProxyService + InstallerService + DiagnosticService tests, Wave 2).
 
 ---
 *State initialized: 2026-04-08*
