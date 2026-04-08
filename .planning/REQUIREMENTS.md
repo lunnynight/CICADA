@@ -32,7 +32,7 @@
 
 ### 覆盖率
 
-- [ ] **COV-01**: 整体测试覆盖率达到 80%
+- [x] **COV-01**: 整体测试覆盖率达到 80%
 
 ### 导航修复
 
@@ -88,7 +88,7 @@
 | WDGT-05 | Phase 2 | Complete |
 | INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
-| COV-01 | Phase 3 | Pending |
+| COV-01 | Phase 3 | Complete |
 | NAV-01 | Phase 3 | Pending |
 | NAV-02 | Phase 3 | Pending |
 | NAV-03 | Phase 3 | Pending |

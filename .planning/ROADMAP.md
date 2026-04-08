@@ -59,7 +59,7 @@ Plans:
 Plans:
 - [ ] 03-01-PLAN.md — Navigation audit + widget tests for DiagnosticPage (Wave 1)
 - [ ] 03-02-PLAN.md — File splits: settings_page.dart + skills_page.dart (Wave 1)
-- [ ] 03-03-PLAN.md — Coverage sprint: models + core unit tests (Wave 1)
+- [x] 03-03-PLAN.md — Coverage sprint: models + core unit tests (Wave 1)
 - [ ] 03-04-PLAN.md — Coverage sprint: data + remaining services tests (Wave 2)
 - [ ] 03-05-PLAN.md — Coverage measurement + gap fill to reach 80% (Wave 3)
 
@@ -69,7 +69,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. 服务层单元测试 | 3/3 | Complete | 2026-04-08 |
 | 2. Widget 与集成测试 | 3/3 | Complete | 2026-04-08 |
-| 3. 收尾与达标 | 0/5 | Planning | - |
+| 3. 收尾与达标 | 1/5 | In Progress|  |
 
 ---
 *Roadmap created: 2026-04-08*

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-08T04:40:37.539Z"
+status: executing
+last_updated: "2026-04-08T05:20:29.711Z"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 6
+  total_plans: 11
   completed_plans: 6
   percent: 100
 ---
@@ -15,21 +15,21 @@ progress:
 # State: Cicada 重构 Phase 3-5
 
 **Last updated:** 2026-04-08
-**Session:** Completed 02-02-PLAN.md (SetupPage + HomePage widget tests)
+**Session:** Completed 03-03-PLAN.md (model and core unit tests)
 
 ## Project Reference
 
 **Core Value:** 测试覆盖率从 10.6% 提升到 80%，并将所有超过 800 行的大文件拆分为可维护的模块，确保重构不破坏现有功能。
 
-**Current Focus:** Phase 02 — widget
+**Current Focus:** Phase 03 — wrap-up
 
 ## Current Position
 
-Phase: 02 (widget) — EXECUTING
-Plan: 2 of 3 complete (02-02 done)
+Phase: 03 (wrap-up) — EXECUTING
+Plan: 4 of 5
 **Phase:** 3
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 03-03 complete
+**Status:** Executing Phase 03
 
 ```
 Progress: [██████████] 100%
@@ -50,6 +50,7 @@ Phase 1 [██████████] → Phase 2 [████████�
 | Phase 02 P01 | 8min | 2 tasks | 5 files |
 
 | Phase 02 P02 | 35min | 2 tasks | 2 files |
+| Phase 03 P03 | 8min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Phase 1 [██████████] → Phase 2 [████████�
 - Strategy A 适用于 SetupPage：InstallerService 静态方法内部有 try/catch，返回安全默认值
 - testWidgets skip 参数类型为 bool? 而非 String — 跳过原因放注释中
 - assets/bundled/nodejs/ 目录需要存在 — pubspec.yaml 声明了该目录，缺失会导致 Windows 构建失败
+- DiagnosticReport/DashboardStats 无 fromJson/toJson — 仅测试构造函数和字段访问
+- PlatformInfo Windows 专属测试用 skip: !Platform.isWindows 保证跨平台可移植性
 
 ### Known Constraints
 
